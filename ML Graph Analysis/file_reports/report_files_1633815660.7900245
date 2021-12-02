@@ -1,0 +1,29 @@
+1 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/workfolderscontrol.dll
+File type: PE32+ executable (DLL) (console) x86-64, for MS Windows
+ 
+2 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/w3tp.dll
+File type: PE32 executable (DLL) (console) Intel 80386, for MS Windows
+ 
+3 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/prune
+File type: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=44431c4eef3858d84274ad9a1e2536deb6f0c8b1, for GNU/Linux 3.2.0, stripped
+ 
+4 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/amfrt32.dll
+File type: PE32 executable (DLL) (GUI) Intel 80386, for MS Windows
+ 
+5 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/xcursorgen
+File type: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=200738d0b8728db8bdf7b9f7ea080e3761ea71c0, for GNU/Linux 3.2.0, stripped
+ 
+6 Success. File Name: /mnt/sda/vol1/8a0/8a0997f21ed396c652b3bb7bd9d48ec102feeff10c91264a827566f91047dd72
+ 
+7 Success. File Name: /mnt/sda/vol1/8a0/8a0c3adecbc5ed295e4532c4421509c5f5a45a0bafd771f4c58913720780325f
+ 
+7 Failure. File Name: /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec
+Reason: Unable to find a loader backend for /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec.  Perhaps try the 'blob' loader?
+ 
+9 Success. File Name: /mnt/sda/vol1/8a0/8a0e373b3eb792a37a76a2c8dc1605f3a8c15775114799b51590190b0ae355b2
+ 
+10 Success. File Name: /mnt/sda/vol1/8a0/8a05fceb292eca704ff8656d95b8fc2060b01c4278f8d69bb6d38af4fcced108
+ 
+Malware Success: 5/5
+Benign Success: 4/5
+AUC: 1.0

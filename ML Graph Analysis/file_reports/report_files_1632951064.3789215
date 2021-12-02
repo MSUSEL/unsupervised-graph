@@ -1,0 +1,233 @@
+1 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/workfolderscontrol.dll
+File type: PE32+ executable (DLL) (console) x86-64, for MS Windows
+ 
+2 Success. File Name: /mnt/sda/vol1/8a0/8a0997f21ed396c652b3bb7bd9d48ec102feeff10c91264a827566f91047dd72
+ 
+3 Success. File Name: /mnt/sda/vol1/8a0/8a0c3adecbc5ed295e4532c4421509c5f5a45a0bafd771f4c58913720780325f
+ 
+3 Failure. File Name: /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec
+Reason: Unable to find a loader backend for /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec.  Perhaps try the 'blob' loader?
+ 
+5 Success. File Name: /mnt/sda/vol1/8a0/8a0e373b3eb792a37a76a2c8dc1605f3a8c15775114799b51590190b0ae355b2
+ 
+6 Success. File Name: /mnt/sda/vol1/8a0/8a05fceb292eca704ff8656d95b8fc2060b01c4278f8d69bb6d38af4fcced108
+ 
+7 Failure. File Name: /mnt/sda/vol1/8a0/8a037dd7f46babe863e1e3591cdc440b9bfe3a1b3817e65ab68d5f460d013c4c
+Reason: 'ValueSet' object has no attribute 'SLT'
+ 
+9 Success. File Name: /mnt/sda/vol1/8a0/8a06b6cd86260cd09f01a3c7a1f7dad224bd802eed98d65c152320f3d76dc645
+ 
+9 Failure. File Name: /mnt/sda/vol1/8a0/8a02395417cf3e6950272833b8ee5aebc86c33522441f86f49f274f2f6c07ec5
+Reason: 'utf-8' codec can't decode byte 0xaa in position 0: invalid start byte
+ 
+11 Success. File Name: /mnt/sda/vol1/8a0/8a00317280e79eb2b630e85cc71febb0d827e306836ff231a535e22f563dab45
+ 
+12 Success. File Name: /mnt/sda/vol1/8a0/8a0fd621333b5dae5ed68b4b1ce7b6f3058767c4dc78ef36cdd7b8c4ef6173de
+ 
+13 Success. File Name: /mnt/sda/vol1/8a0/8a040f58b8dbc1bfc42e4306604da9b8669c3a0590b2753f491042fe652e8598
+ 
+14 Failure. File Name: /mnt/sda/vol1/8a0/8a071d0a8b208cd055e067fb561b3959d7f7f26305878b71254693fe3a2c2910
+Reason: Not enough data for store
+ 
+16 Success. File Name: /mnt/sda/vol1/8a0/8a0cf8722e40f940fdd03f47f62278b3c91570c9b2c3bc817c9ecb733c8a446e
+ 
+17 Success. File Name: /mnt/sda/vol1/8a0/8a0c28ba094f18152902ff4eec31fc4008bab7c898306b3bd933f36d3e914124
+ 
+18 Success. File Name: /mnt/sda/vol1/8a0/8a046cb495e5e17c320b61f5a17e963c704f73670eb7abc0b28e5131397995e6
+ 
+19 Success. File Name: /mnt/sda/vol1/8a0/8a01244bae3fc8ba837804588cede64291bdb4fb2822fc4cbe98afdb0c38fb05
+ 
+20 Success. File Name: /mnt/sda/vol1/8a0/8a0663288106350bc966b9bead0d4d18916900753b17b398b647c9fa7fdbf279
+ 
+21 Failure. File Name: /mnt/sda/vol1/8a0/8a01d1dcc835dc59c39c797e25969827cdfe7c816cf15d8f253f7d609780923c
+Reason: Not enough data for store
+ 
+23 Failure. File Name: /mnt/sda/vol1/8a0/8a0f086ced7a92064fb3ea138d7a70441d65550cb9ac535eed0d0c234f2f6759
+Reason: Not enough data for store
+ 
+25 Success. File Name: /mnt/sda/vol1/8a0/8a016a92fdaa3755ca4016623322776cafc536477ed361f6a7faf2cf00afe9ae
+ 
+26 Success. File Name: /mnt/sda/vol1/8a0/8a0c544dc3bf0ceda64f9124543c76464e94bd9d62f2d85272b3500909a74a20
+ 
+27 Success. File Name: /mnt/sda/vol1/8a0/8a0535e094c22508786e1b3a732bd2dbe6a94d5ce2798fa5b1673515c04ecfd9
+ 
+28 Success. File Name: /mnt/sda/vol1/8a0/8a08ca3d6caf6c1b0a4edc4dfd5842a544661717d2300e7cb9199031bd2ba72d
+ 
+29 Success. File Name: /mnt/sda/vol1/8a0/8a0059c3c6d88477a08e5d648355d88c2e56c5d218ac84ae84227a7f9664605b
+ 
+30 Failure. File Name: /mnt/sda/vol1/8a0/8a02fffffc18f4a431de477cbd32b26a26fc719a6aa0edd29902da9c3f0677db
+Reason: Not enough data for store
+ 
+32 Success. File Name: /mnt/sda/vol1/8a0/8a035eb8197d2d261e46dd78dfff693f1219a000f58b1526213a05fa3f943e5c
+ 
+33 Success. File Name: /mnt/sda/vol1/8a0/8a0f02fd6c05492859c78191b7bff2e7532257c6a76062bedd55c1d482f8079a
+ 
+34 Success. File Name: /mnt/sda/vol1/8a0/8a0d02ce84fcb0a9f24f4f09fd441a8fa8363bf4e77a7470251dfbeb70232846
+ 
+35 Success. File Name: /mnt/sda/vol1/8a0/8a0d8695dd04dce2e1d9d7ba490b5613462794cc3a375890c94438072edf51a1
+ 
+36 Success. File Name: /mnt/sda/vol1/8a0/8a0e7d63cab90d95bfac059d1dba1420ec5995ac1bac232488227812785be889
+ 
+37 Success. File Name: /mnt/sda/vol1/8a0/8a0457ee32fced56942a652a1285537cbc14bdb8c83949349a3fcdcfbb89783b
+ 
+38 Failure. File Name: /mnt/sda/vol1/8a0/8a03437d027b97dbc641fe3ac22e6615d17b7f66916b8e2ac12e257e8fe2867b
+Reason: No bytes in memory for block starting at 0x4146c0.
+ 
+40 Success. File Name: /mnt/sda/vol1/8a0/8a04e4ad061eb8c852eb2c2b140fd3341260086b6564bea66141aafda4819ecd
+ 
+41 Failure. File Name: /mnt/sda/vol1/8a0/8a0c6851018fa675ae5bc2514acd3640a2537569fc3614e887ffb6737fe5bacd
+Reason: No bytes in memory for block starting at 0x43d741.
+ 
+43 Success. File Name: /mnt/sda/vol1/8a0/8a048cd29fc1f274cb30acb6ee1e9f8d047967189e85c87066cff3c4364ed364
+ 
+44 Success. File Name: /mnt/sda/vol1/8a0/8a05f1e70b5a04fc39abcb4756bf3f655879f8627acafb9d8ae8c7aacdb3730d
+ 
+45 Success. File Name: /mnt/sda/vol1/8a0/8a0b183f0479984e977be0b13e577a2d78a324272fbd06926812c55c66f8f6e0
+ 
+46 Failure. File Name: /mnt/sda/vol1/8a0/8a072a025dd248eef29a3b3aac13b89cfbbcb74ce8f0bcd371fc47c62b4acb86
+Reason: No bytes in memory for block starting at 0x4dc4be.
+ 
+48 Success. File Name: /mnt/sda/vol1/8a0/8a0cbd4a82985a6854c774e67851f10cd29c93e786c6c54ada56b1da0d3ddc7f
+ 
+49 Failure. File Name: /mnt/sda/vol1/8a0/8a0a904dcff6054665ed0eec124d0584f4d3b471fa590b029af8083e455641b0
+Reason: Not enough data for store
+ 
+51 Success. File Name: /mnt/sda/vol1/8a0/8a00e5b56bc2ac6d724aad48cab6a1bf01909c9e70673aa5c248c11eb45fd491
+ 
+52 Success. File Name: /mnt/sda/vol1/8a0/8a09aeb5f0c9926a75c0b924d73c8f71eca87e428183e573dc63f4c4c2a7a8bd
+ 
+53 Success. File Name: /mnt/sda/vol1/8a0/8a0873730e23690721c3acda9d0945788b809c997659c936d55797e6fe104668
+ 
+54 Success. File Name: /mnt/sda/vol1/8a0/8a0410e329955cf2149deaeaf0c463137d52d05ff5003be1120d5ca3d1f04f08
+ 
+55 Success. File Name: /mnt/sda/vol1/8a0/8a090cdc46dc4fd9e4a96918b97bf72d2763aeaad56432e8967ca72672f7a281
+ 
+56 Failure. File Name: /mnt/sda/vol1/8a0/8a039fc94d5fde6735394fe309686e5dd2d26ba32c97ec2ab0d49fa222f86e28
+Reason: Not enough data for store
+ 
+58 Success. File Name: /mnt/sda/vol1/8a0/8a00b4f32cd12b2f64e40b39b5b47da233d7c1f8f3a4b309dc4f31095d0a7ce1
+ 
+59 Failure. File Name: /mnt/sda/vol1/8a0/8a0c0ad32ddc1cf76c420a3d338759df4b4d9cddbb4b7bc1e909b00e394d2f12
+Reason: 'ValueSet' object has no attribute 'SLT'
+ 
+61 Failure. File Name: /mnt/sda/vol1/8a0/8a012190c9721067880f9bb6f7953bbf8e101e6388e2b43b6422524df3ec5ba7
+Reason: 'ValueSet' object has no attribute 'SLT'
+ 
+63 Success. File Name: /mnt/sda/vol1/8a0/8a0070cd42a0701374c6243b3ea91c4d98089a985cdcc38a0459fea96f53c167
+ 
+64 Success. File Name: /mnt/sda/vol1/8a0/8a05eaf37866a3fbdebc356b72997e1794080ad7afef4d560e3c1631d8026249
+ 
+65 Success. File Name: /mnt/sda/vol1/8a0/8a03cfb1f45c13a55d357cb0804a02116360b929c9309854078c53128e0790e3
+ 
+66 Success. File Name: /mnt/sda/vol1/8a0/8a0662b1603788159c035ec8c495b080aebb489d84aee8223ec42e44fbb9045a
+ 
+67 Success. File Name: /mnt/sda/vol1/8a0/8a04cea05840ad5f09d55a9c88f1637c596287231379e7a75949de31869c2a46
+ 
+68 Failure. File Name: /mnt/sda/vol1/8a0/8a064ef07142981749bbb5ecc011a7d6c505401cfdbe58f25307634f96ed8a8d
+Reason: Not enough data for store
+ 
+70 Success. File Name: /mnt/sda/vol1/8a0/8a0c708819db3f571bf2f23b3d461c2287430bd409cc5781b735a98c701e0108
+ 
+71 Success. File Name: /mnt/sda/vol1/8a0/8a0da3c4bb35e50b8e4385012d0c179812ecdac099559df34b23cee964d63651
+ 
+72 Success. File Name: /mnt/sda/vol1/8a0/8a087e750ebf3b00d1a9e8d6e5a1845a1328f8a45094e02f13094519198c8140
+ 
+73 Success. File Name: /mnt/sda/vol1/8a0/8a095663c95f397c87bf7cc1dcb914f6ae565c8e93d797ee803687b756fbda70
+ 
+74 Success. File Name: /mnt/sda/vol1/8a0/8a0a8695b261ec6df56ceec8212e6f0e462fbef8837d399941a00a71e6e67a78
+ 
+75 Failure. File Name: /mnt/sda/vol1/8a0/8a09962bf3033a9a28c2c82674459024e18bb5d9da61fbfcc5141d1b81e223a6
+Reason: No bytes in memory for block starting at 0x41b0df.
+ 
+77 Success. File Name: /mnt/sda/vol1/8a0/8a0f817393d3416a2c05e1f4a9cb0fa2de6d6c05fba6121e59ab9e8a4fb2ecf7
+ 
+78 Success. File Name: /mnt/sda/vol1/8a0/8a0fe961d0b30b92584ea0d073f60195477b192ab211aa5e7ce00fcdac052a6a
+ 
+79 Failure. File Name: /mnt/sda/vol1/8a0/8a05c1aba95cb64d90014a8e7e4533aba21be82a6e85a285f5ac2545648b07bb
+Reason: list index out of range
+ 
+81 Failure. File Name: /mnt/sda/vol1/8a0/8a08d2dfa33615398246a09c42db245f9ae93e0387e4226edb7cde6a3a72c883
+Reason: Not enough data for store
+ 
+83 Success. File Name: /mnt/sda/vol1/8a0/8a0506984564484e996325504209c5af175fed0947a7a429b7ebe91ffee47967
+ 
+84 Success. File Name: /mnt/sda/vol1/8a0/8a0e101d89ebbd52f1beb4e5b26140d216eded494014db38c24433fdd446a35d
+ 
+85 Failure. File Name: /mnt/sda/vol1/8a0/8a09e5331d4b403d4d5b5e22772ec1c4bd3a7623594b07922ba0013a269f1205
+Reason: Not enough data for store
+ 
+87 Success. File Name: /mnt/sda/vol1/8a0/8a00eef659254b1e564f958080ab4c5d21634604beb84b2c55b051d4d9553a8b
+ 
+88 Success. File Name: /mnt/sda/vol1/8a0/8a06ec3678309e2748f482d5d7acb0524cc86b6d34b82bf9c58fd4372a906104
+ 
+89 Failure. File Name: /mnt/sda/vol1/8a0/8a02ac816111000aa2dad6ce9594e7e27c3efd67d7b953004afe3ac869260917
+Reason: args' length must all be equal
+ 
+91 Success. File Name: /mnt/sda/vol1/8a0/8a073b6eb0bb3e692c9055b5633d58bb7627c9950a898e6b893df0884f635671
+ 
+92 Failure. File Name: /mnt/sda/vol1/8a0/8a030d1b3dcafbbc47ec6faff22483cec0dc3a6e727c2ceaffce25e5562feb99
+Reason: Not enough data for store
+ 
+94 Success. File Name: /mnt/sda/vol1/8a0/8a00ab0d1660c3e242b454452767e1edfcca838c773d29b06fb7f27bdb71309f
+ 
+95 Failure. File Name: /mnt/sda/vol1/8a0/8a0b60404cf5684ec65eb19982f4d67deffe4e001f770e80b0e4cb47c8745a04
+Reason: unsupported operand type(s) for |: 'ValueSet' and 'StridedInterval'
+ 
+97 Success. File Name: /mnt/sda/vol1/8a0/8a0b74676333cb6b0baca6f3677ae4483ce033d763348de320da6896c5e5cef7
+ 
+98 Success. File Name: /mnt/sda/vol1/8a0/8a0e2b82c50935357e0404467425b5885f1e4c4663c75517b3cbd62f4a312278
+ 
+99 Success. File Name: /mnt/sda/vol1/8a0/8a0dd46e7b75188718730a4a3216b9c8661b82e8f536cec71d73267be101f30b
+ 
+100 Failure. File Name: /mnt/sda/vol1/8a0/8a0afdf026ff73a4db2e5da7d3ee1f96970975c77b28809f3e27f66fb879f66c
+Reason: Not enough data for store
+ 
+102 Success. File Name: /mnt/sda/vol1/8a0/8a0fa89e3db30d57984815da19f9b63e501470faf142c48efd3c42edd8cb7dd9
+ 
+103 Success. File Name: /mnt/sda/vol1/8a0/8a0226375c6d149118a4e9903de1725d95f198d6c91001a189fe35c61ab7a2e5
+ 
+104 Success. File Name: /mnt/sda/vol1/8a0/8a07b20441197e428535496f894c3418799ef6884152f9af1ad338b3eda5fc7e
+ 
+105 Success. File Name: /mnt/sda/vol1/8a0/8a0081401d6eda92c2210c665d19bd0441cfeea5bfd79a373fc298ad0785cdac
+ 
+106 Success. File Name: /mnt/sda/vol1/8a0/8a0bee6aff9f9569651d6bbfb4772f18751525b574d1a603ed51c1363b25f97f
+ 
+107 Success. File Name: /mnt/sda/vol1/8a0/8a01221b409c153764935af61c9e62e19b03746c2d5f4ae9e1445ac9a5548699
+ 
+108 Success. File Name: /mnt/sda/vol1/8a0/8a0d6c06c22f4b48138c3286fd4a06841a972c2ffbaa1e6fa90a4d08d5377a06
+ 
+109 Success. File Name: /mnt/sda/vol1/8a0/8a04b3f8dccdab7f598205cdd9b4c2891948af43321e174c96c83afd3e25c73d
+ 
+110 Success. File Name: /mnt/sda/vol1/8a0/8a0f4d902109dde5cd65082eed9942bbb43fd0dab8d2555f64202ad20ab0e77e
+ 
+111 Success. File Name: /mnt/sda/vol1/8a0/8a01ab59484f822359ef7aa5fd73c62bfbe2603919f2e90d58a33a035c8c34ff
+ 
+112 Failure. File Name: /mnt/sda/vol1/8a0/8a01e4a7787671a0f66db42304d8e2e1212ac1e66a8293b6aeb32c13e5f2f81d
+Reason: Not enough data for store
+ 
+114 Failure. File Name: /mnt/sda/vol1/8a0/8a066169e72151329ce57c8b821f722f7df0e6b3ed63a6a64eafde9ae853d11e
+Reason: 'ValueSet' object has no attribute '_unsigned_bounds'
+ 
+116 Success. File Name: /mnt/sda/vol1/8a0/8a0e3509f8057142ee03cb7275d5c1f3a6cae19c63ab7b545c85bbee4a4108d0
+ 
+117 Success. File Name: /mnt/sda/vol1/8a0/8a05bd5c042f46d0ea1cf284c78189865f0cbf49df65d983c2703713d2cf32e7
+ 
+118 Failure. File Name: /mnt/sda/vol1/8a0/8a00102e02f12a5e26c7deed21394ffdeb07ec16bfb84537f9709d3e63d2c1ca
+Reason: Not enough data for store
+ 
+119 Failure. File Name: /mnt/sda/vol1/8a0/8a0623a33fbff8a859f5811d6e912fb04c7cd1678506c9d16ff72e575addb3c5
+Reason: 'utf-8' codec can't decode byte 0xb8 in position 7: invalid start byte
+ 
+121 Success. File Name: /mnt/sda/vol1/8a0/8a035d71081b5e068ef2486c44784b32365e39a200c59381b151039f58775313
+ 
+122 Success. File Name: /mnt/sda/vol1/8a0/8a07064f4bd511f4a34009271a88d081985f0c6df975e088a83fe4d95aabc83f
+ 
+123 Success. File Name: /mnt/sda/vol1/8a0/8a0b2a9a25c91e3163178f6282552cd60d721e5694e92f482ee43a7d85f19a23
+ 
+124 Success. File Name: /mnt/sda/vol1/8a0/8a051df869cf16e3a97e74a39e2e28233047ccdc423bb1ed4ca293ea8542e016
+ 
+125 Failure. File Name: /mnt/sda/vol1/8a0/8a01cff0c6aaf7b8579edec652be0f9a2fa10478edc18cc6bd6e201f94197247
+Reason: Not enough data for store
+ 
+Malware Success: 73/100
+Benign Success: 0/1

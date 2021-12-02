@@ -1,0 +1,9 @@
+1 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/workfolderscontrol.dll
+File type: PE32+ executable (DLL) (console) x86-64, for MS Windows
+ 
+2 Success. File Name: /mnt/sda/vol1/8a0/8a0997f21ed396c652b3bb7bd9d48ec102feeff10c91264a827566f91047dd72
+ 
+3 Success. File Name: /mnt/sda/vol1/8a0/8a0c3adecbc5ed295e4532c4421509c5f5a45a0bafd771f4c58913720780325f
+ 
+Malware Success: 3/2
+Benign Success: 0/1

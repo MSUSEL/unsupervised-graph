@@ -1,0 +1,28 @@
+1 Success. File Name: /home/daniel/Documents/Research/datasets/py-angr-data/workfolderscontrol.dll
+File type: PE32+ executable (DLL) (console) x86-64, for MS Windows
+ 
+2 Success. File Name: /mnt/sda/vol1/8a0/8a0997f21ed396c652b3bb7bd9d48ec102feeff10c91264a827566f91047dd72
+ 
+3 Success. File Name: /mnt/sda/vol1/8a0/8a0c3adecbc5ed295e4532c4421509c5f5a45a0bafd771f4c58913720780325f
+ 
+3 Failure. File Name: /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec
+Reason: Unable to find a loader backend for /mnt/sda/vol1/8a0/8a09405b0a452a2020b17b3c9bec704fb4fc57c918d4ee665323e07be0e106ec.  Perhaps try the 'blob' loader?
+ 
+5 Success. File Name: /mnt/sda/vol1/8a0/8a0e373b3eb792a37a76a2c8dc1605f3a8c15775114799b51590190b0ae355b2
+ 
+6 Success. File Name: /mnt/sda/vol1/8a0/8a05fceb292eca704ff8656d95b8fc2060b01c4278f8d69bb6d38af4fcced108
+ 
+7 Failure. File Name: /mnt/sda/vol1/8a0/8a037dd7f46babe863e1e3591cdc440b9bfe3a1b3817e65ab68d5f460d013c4c
+Reason: 'ValueSet' object has no attribute 'SLT'
+ 
+9 Success. File Name: /mnt/sda/vol1/8a0/8a06b6cd86260cd09f01a3c7a1f7dad224bd802eed98d65c152320f3d76dc645
+ 
+9 Failure. File Name: /mnt/sda/vol1/8a0/8a02395417cf3e6950272833b8ee5aebc86c33522441f86f49f274f2f6c07ec5
+Reason: 'utf-8' codec can't decode byte 0xaa in position 0: invalid start byte
+ 
+11 Success. File Name: /mnt/sda/vol1/8a0/8a00317280e79eb2b630e85cc71febb0d827e306836ff231a535e22f563dab45
+ 
+12 Success. File Name: /mnt/sda/vol1/8a0/8a0fd621333b5dae5ed68b4b1ce7b6f3058767c4dc78ef36cdd7b8c4ef6173de
+ 
+Malware Success: 8/10
+Benign Success: 0/1
