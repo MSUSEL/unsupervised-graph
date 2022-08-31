@@ -1,6 +1,6 @@
 # Binary file analysis using Graph2Vec and unsupervised clustering
 
-The repository contains programs for
+The repository contains 'main.py' programs for
 1. Creating Control Flow Graphs (CFG) from binary files using 'angr' package.
 2. Create vector representation for CFGs using 'Graph2Vec' graph embedding.
 3. Unsupervised clustering algorithm training with hold out validation.
