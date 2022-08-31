@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 
-from util import *
+from g2v_util import *
 from cluster_util import *
 import gc
 import os

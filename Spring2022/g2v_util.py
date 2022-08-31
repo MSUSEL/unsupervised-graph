@@ -252,6 +252,7 @@ def createEmbedding(graph_list):
 
 
 def createWLhash(graph_list, param):
+    # TODO: parallel implementation
     documents = []
 
     for graph in graph_list:
@@ -531,7 +532,7 @@ def train_G2V_model(train_graphs, train_labels, train_names, param, ndims_list, 
         d2v_model = trainD2Vmodel(train_corpus, param)
 
         if save_model:
-            model_path = output_path + 'G2V_models'
+            model_path = output_path + 'd2v_models/'
 
             os.makedirs(model_path, exist_ok= True)
 
