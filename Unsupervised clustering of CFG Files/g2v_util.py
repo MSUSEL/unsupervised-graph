@@ -198,12 +198,28 @@ def loadCFG(cfg_path, n_prog = 0):
 
     return Graphs, file_names
 
+def loadTrainCFG(cfg_path, n_precentage = 0.2):
+    malware_cfg_path = cfg_path + 'Malware_CFG/'
+    benign_cfg_path = cfg_path + 'Benign_CFG/'
+    n_malware = 3000
+    n_benign = 3000
+
+    # Load .gpickle CFG files
+    Malware_graphs, Malware_names = loadCFG(malware_cfg_path)
+    Benign_graphs, Benign_names = loadCFG(benign_cfg_path)
+
+    ## Train divide for vocabulary training graphs
+    vocab_train_graphs, train_graphs, vocab_train_labels, train_labels, n_vocab_train, n_train, vocab_train_names, train_names = \
+        train_test_divide(Malware_graphs, Benign_graphs, Malware_names, Benign_names, n_malware, n_benign,
+                          n_precentage)
+
+    return vocab_train_graphs, train_graphs, vocab_train_labels, train_labels, n_vocab_train, n_train, vocab_train_names, train_names
 
 def loadTestCFG(cfg_path):
     # Load CFG dataset from the given cfg path
 
-    malware_cfg_path = cfg_path + 'Test_CFG/Malware/'
-    benign_cfg_path = cfg_path + 'Test_CFG/Benign/'
+    malware_cfg_path = cfg_path + 'Test_CFG/Malware_CFG/'
+    benign_cfg_path = cfg_path + 'Test_CFG/Benign_CFG/'
 
     # Load Malware .gpickle CFG files
     Malware_graphs, Malware_names = loadCFG(malware_cfg_path, 0)
@@ -429,7 +445,7 @@ def read_Dike_file_info(twoD_tsne_vector, info_path, file_names):
     plt.suptitle('Malware types')
     plt.show()
 
-    print("dONE")
+    print("DONE")
 
     return 0
 
