@@ -1,3 +1,13 @@
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import SpectralClustering
+from sklearn.cluster import KMeans
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics.cluster import contingency_matrix
+from sklearn import metrics
+
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 import os
@@ -42,6 +52,9 @@ def TSNE_2D_plot(vector, labels, n_vec, dimensions, return_plot = False):
 
 
 def generate_DBSCAN(vector, labels, eps, min_samples, twoD_vector):
+
+    _, ndim = vector.shape
+
     # Get results for DBSCAN clustering algorithm
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(vector)
     # Get DBSCAN cluster labels
@@ -89,15 +102,15 @@ def generate_DBSCAN(vector, labels, eps, min_samples, twoD_vector):
             markerfacecolor=tuple(col),
             markeredgecolor="k",
             markersize=14,
+            alpha =0.4
         )
 
-    plt.title('DBSCAN with dim ( ' + str(ndims) + ')\nEstimated number of clusters: ' + str(n_clusters_)
+    plt.title('DBSCAN with dim ( ' + str(ndim) + ')\nEstimated number of clusters: ' + str(n_clusters_)
               + '\n eps = '+str(eps))
-    fig1 = plt.gcf()
+    fig = plt.gcf()
     # plt.show()
-    # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
-    fname = './SSD_data_test/SSD_graphs/SSD_DBSCAN-' + str(ndims) + '-dims.png'
-    # fig1.savefig(fname)
+    # fname = './SSD_data_test/SSD_graphs/SSD_DBSCAN-' + str(ndim) + '-dims.png'
+    # fig.savefig(fname)
     plt.clf()
     return clustering, fig
 
@@ -134,16 +147,16 @@ def generate_AgglomerativeCluster(vector, labels, twoD_vector, n_cluster =2 , li
             markerfacecolor=tuple(col),
             markeredgecolor="k",
             markersize=7,
+            alpha =0.4,
         )
 
 
     plt.title('Agglomerative with dim ( ' + str(ndims) + ')\nEstimated number of clusters: ' + str(n_clusters_)
               + '\n #clusters = ' + str(n_cluster) + ', linkage = ' + linkage)
-    fig1 = plt.gcf()
+    fig = plt.gcf()
     # plt.show()
-    # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
     fname = './SSD_data_test/SSD_graphs/SSD_agglomerative-' + str(ndims) + '-dims.png'
-    # fig1.savefig(fname)
+    # fig.savefig(fname)
     plt.clf()
     return clustering, fig
 
@@ -279,3 +292,50 @@ def model_evaluation(X, labels):
     # df = pd.DataFrame(d, index=)
     return d
 
+def plot_clusters(twoD_vector, cluster_Labels, alg_name ='', hyp_para= 0, ndim= 2):
+    core_samples_mask = np.zeros_like(cluster_Labels, dtype=bool)
+    # core_samples_mask[clustering.core_sample_indices_] = True
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(cluster_Labels)) - (1 if -1 in cluster_Labels else 0)
+    n_noise_ = list(cluster_Labels).count(-1)
+    # Plot result
+
+    # Black removed and is used for noise instead.
+    unique_labels = set(cluster_Labels)
+    colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+
+    labels = {}
+
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = cluster_Labels == k
+
+        xy = twoD_vector[class_member_mask]
+
+        labels[str(k+1)] = xy[0]
+
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=5,
+            alpha= 0.4,
+        )
+
+    # for each in labels.keys():
+    #     plt.annotate(each,labels[each], weight= 'bold', size = 20)
+
+    plt.title( alg_name + ' with dim ( ' + str(ndim) + ')\n #density para = ' + str(hyp_para/100) )
+    fig = plt.gcf()
+    plt.show()
+
+    # fname = './SSD_data_test/SSD_graphs/SSD_agglomerative-' + str(ndims) + '-dims.png'
+    # fig.savefig(fname)
+    plt.clf()
+    return fig
