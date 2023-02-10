@@ -11,9 +11,9 @@ The repository contains 'main.py' programs for
 Due to the security risk of sharing Malware binary files online. These binary files 
 are not shared. However, the hash values of the binaries are given for information. 
 
-Dataset is currently shared via the following link.
+Dataset is permanently archived at the following link.
 
-'https://montanaedu-my.sharepoint.com/:f:/g/personal/t41n359_msu_montana_edu/Etvup_aPEjRDs0VBTEi40_UBALmLdSShC2mch8DmuILZ8w?e=rzkdWv'
+'https://doi.org/10.5281/zenodo.7630371'
 
 Datasets composition is as follows 
 
