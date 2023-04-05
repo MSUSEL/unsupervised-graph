@@ -412,7 +412,7 @@ if __name__ == "__main__":
 
     ####### 3. Unsupervised clustering algorithm training with hold out validation. ##################
     print('STEP: 3')
-    # clustering_training(output_path)
+    clustering_training(output_path)
 
     ####### 4. Cluster prediction for Test dataset ##################
     print('STEP: 4')
