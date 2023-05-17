@@ -84,8 +84,9 @@ Types of Malware according to VIRUSTOTAL are given in the following table.
 - class_labels_no_dupes.txt (class labels for benign and malware)
 
 ### Usage
-The experiments showing curating and reading the dataset ican be found at 
+The experiments showing curating and reading the dataset can be found at 
 "https://github.com/MSUSEL/unsupervised-graph/tree/main/Unsupervised%20clustering%20of%20CFG%20Files"
 
 A stable reproducible capsule is available at "https://codeocean.com/capsule/6978226/tree"
 
+<script src="https://codeocean.com/widget.js?slug=6978226" async></script> 
