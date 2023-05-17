@@ -28,7 +28,10 @@ are not shared. However, the hash values of the binaries are given for informati
 
 Dataset is permanently archived at the following link.
 
-'https://doi.org/10.5281/zenodo.7630371'
+IEEE Dataport = 'https://dx.doi.org/10.21227/31pa-7837'
+ZONODO - 'https://doi.org/10.5281/zenodo.7630371'
+
+
 
 ### Composition
 
