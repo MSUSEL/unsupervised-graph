@@ -423,15 +423,15 @@ if __name__ == "__main__":
     ## Training binary files
     train_prog_path = prog_path + 'Train/'
     train_cfg_path = cfg_path + 'Train_CFG/'
-    n_malware = 300  # Maximum 3000,  for quick run use 300
-    n_benign = 300  # Maximum 3000,  for quick run use 300
+    n_malware = 3000  # Maximum 3000,  for quick run use 300
+    n_benign = 3000  # Maximum 3000,  for quick run use 300
     # create_CFG_datastet(train_prog_path, cfg_path, n_malware, n_benign)
 
     ## Testing binary files
     test_prog_path = prog_path + 'Test/'
     test_cfg_path = cfg_path + 'Test_CFG/'
-    n_test_malware = 100  # Maximum 1000, for quick run use 100
-    n_test_benign = 100  # Maximum 1000, for quick run use 100
+    n_test_malware = 1000  # Maximum 1000, for quick run use 100
+    n_test_benign = 1000  # Maximum 1000, for quick run use 100
     # create_CFG_datastet(test_prog_path, cfg_path, n_malware, n_benign)
 
     ######## 2. Create vector representation for CFGs using 'Graph2Vec' graph embedding. ############
