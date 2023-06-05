@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from sklearn.manifold import TSNE
+from sklearn.cluster import *
+from sklearn import metrics
+from sklearn.metrics.cluster import contingency_matrix
 
 import pickle
 
@@ -42,6 +45,8 @@ def TSNE_2D_plot(vector, labels, n_vec, dimensions, return_plot = False):
 
 
 def generate_DBSCAN(vector, labels, eps, min_samples, twoD_vector):
+    _, ndim = vector.shape
+
     # Get results for DBSCAN clustering algorithm
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(vector)
     # Get DBSCAN cluster labels
@@ -91,20 +96,22 @@ def generate_DBSCAN(vector, labels, eps, min_samples, twoD_vector):
             markersize=14,
         )
 
-    plt.title('DBSCAN with dim ( ' + str(ndims) + ')\nEstimated number of clusters: ' + str(n_clusters_)
+    plt.title('DBSCAN with dim ( ' + str(ndim) + ')\nEstimated number of clusters: ' + str(n_clusters_)
               + '\n eps = '+str(eps))
-    fig1 = plt.gcf()
+    fig = plt.gcf()
     # plt.show()
     # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
-    fname = './SSD_data_test/SSD_graphs/SSD_DBSCAN-' + str(ndims) + '-dims.png'
+    # fname = './SSD_data_test/SSD_graphs/SSD_DBSCAN-' + str(ndim) + '-dims.png'
     # fig1.savefig(fname)
     plt.clf()
     return clustering, fig
 
 def generate_AgglomerativeCluster(vector, labels, twoD_vector, n_cluster =2 , linkage = 'ward' ):
+
+    _, ndim = vector.shape
     clustering = AgglomerativeClustering(n_clusters= n_cluster, linkage= linkage).fit(vector)
 
-    # Get DBSCAN cluster labels
+    # Get cluster labels
     cluster_Labels = clustering.labels_
 
     core_samples_mask = np.zeros_like(cluster_Labels, dtype=bool)
@@ -137,20 +144,21 @@ def generate_AgglomerativeCluster(vector, labels, twoD_vector, n_cluster =2 , li
         )
 
 
-    plt.title('Agglomerative with dim ( ' + str(ndims) + ')\nEstimated number of clusters: ' + str(n_clusters_)
+    plt.title('Agglomerative with dim ( ' + str(ndim) + ')\nEstimated number of clusters: ' + str(n_clusters_)
               + '\n #clusters = ' + str(n_cluster) + ', linkage = ' + linkage)
-    fig1 = plt.gcf()
+    fig = plt.gcf()
     # plt.show()
     # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
-    fname = './SSD_data_test/SSD_graphs/SSD_agglomerative-' + str(ndims) + '-dims.png'
+    # fname = './SSD_data_test/SSD_graphs/SSD_agglomerative-' + str(ndim) + '-dims.png'
     # fig1.savefig(fname)
     plt.clf()
     return clustering, fig
 
 def generate_spectral_clustering(vector, labels, twoD_vector, n_cluster = 2, assign_labels = 'discretize' ):
+    _, ndim = vector.shape
     clustering = SpectralClustering(n_clusters= n_cluster, assign_labels = assign_labels, random_state=0).fit(vector)
 
-    # Get DBSCAN cluster labels
+    # Get cluster labels
     cluster_Labels = clustering.labels_
 
     core_samples_mask = np.zeros_like(cluster_Labels, dtype=bool)
@@ -182,7 +190,7 @@ def generate_spectral_clustering(vector, labels, twoD_vector, n_cluster = 2, ass
             markersize=5,
         )
 
-    plt.title('Spectral with dim ( ' + str(ndims) + ')\nEstimated number of clusters: ' + str(n_clusters_)
+    plt.title('Spectral with dim ( ' + str(ndim) + ')\nEstimated number of clusters: ' + str(n_clusters_)
               + '\n #clusters = ' + str(n_cluster) + ', labels = ' + assign_labels)
     fig = plt.gcf()
     # plt.show()
@@ -194,9 +202,10 @@ def generate_spectral_clustering(vector, labels, twoD_vector, n_cluster = 2, ass
     return clustering, fig
 
 def generate_kmeans_clustering(vector, labels, twoD_vector, n_cluster = 2, random_state = 0):
+    _, ndim = vector.shape
     clustering = KMeans(n_clusters=n_cluster, random_state = random_state).fit(vector)
 
-    # Get DBSCAN cluster labels
+    # Get cluster labels
     cluster_Labels = clustering.labels_
 
     core_samples_mask = np.zeros_like(cluster_Labels, dtype=bool)
@@ -237,7 +246,7 @@ def generate_kmeans_clustering(vector, labels, twoD_vector, n_cluster = 2, rando
         plt.annotate(each, labels[each], weight='bold', size=20)
 
 
-    plt.title('Kmeans with dim ( ' + str(ndims) + ')\n #clusters = ' + str(n_cluster) )
+    plt.title('Kmeans with dim ( ' + str(ndim) + ')\n #clusters = ' + str(n_cluster) )
     fig = plt.gcf()
     plt.show()
     # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
@@ -279,3 +288,50 @@ def model_evaluation(X, labels):
     # df = pd.DataFrame(d, index=)
     return d
 
+def plot_clusters(twoD_vector, cluster_Labels, alg_name ='', hyper_para_name='default', hyp_para= 0, ndims='default'):
+    core_samples_mask = np.zeros_like(cluster_Labels, dtype=bool)
+    # core_samples_mask[clustering.core_sample_indices_] = True
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(cluster_Labels)) - (1 if -1 in cluster_Labels else 0)
+    n_noise_ = list(cluster_Labels).count(-1)
+    # Plot result
+
+    # Black removed and is used for noise instead.
+    unique_labels = set(cluster_Labels)
+    colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+
+    labels = {}
+
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = cluster_Labels == k
+
+        xy = twoD_vector[class_member_mask]
+
+        labels[str(k+1)] = xy[0]
+
+        plt.plot(
+            xy[:, 0],
+            xy[:, 1],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor="k",
+            markersize=5,
+            alpha= 0.4,
+        )
+
+    for each in labels.keys():
+         plt.annotate(each,labels[each], weight= 'bold', size = 20)
+
+    plt.title( alg_name + ' with dim ( ' + str(ndims) + ')\n #'+ hyper_para_name +' = ' + str(hyp_para) )
+    fig = plt.gcf()
+    plt.show()
+    # fname = './Dikedataset_graphs/figs/synthetic-graph-comparison-graph2vec-' + str(ndims) + '-dims.png'
+    # fname = './SSD_data_test/SSD_graphs/SSD_agglomerative-' + str(ndims) + '-dims.png'
+    # fig.savefig(fname)
+    # plt.clf()
+    return fig

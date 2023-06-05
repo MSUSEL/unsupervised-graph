@@ -1,5 +1,9 @@
 # Binary file analysis using Graph2Vec and unsupervised clustering
 
+![Overview](./assets/binary_ML_overview.png)
+
+A stable reproducible capsule is available at "https://codeocean.com/capsule/6978226/tree"
+
 The repository contains 'main.py' programs for
 1. Creating Control Flow Graphs (CFG) from binary files using 'angr' package.
 2. Create vector representation for CFGs using 'Graph2Vec' graph embedding.
@@ -8,12 +12,28 @@ The repository contains 'main.py' programs for
 
 ## Dataset
 
+### Introduction
+Detecting malware from binary files is an important task in the research and development of the fields of cybersecurity 
+and machine learning. This dataset was curated to assess the viability of unsupervised machine learning clustering 
+techniques to identify differences between graph representations of benign software and malware. 
+
+The dataset contains Control Flow Graphs benign and malicious programs. The dataset consists of benign operating system 
+files as well as malware provided by Hoplite industries(https://www.hopliteindustries.com).
+
+The binary files are first converted into a control flow graph (CFG) representation. This is carried out by the 
+CFGEmulated() function of the "angr" Python library.
+
 Due to the security risk of sharing Malware binary files online. These binary files 
 are not shared. However, the hash values of the binaries are given for information. 
 
 Dataset is permanently archived at the following link.
 
-'https://doi.org/10.5281/zenodo.7630371'
+IEEE Dataport = 'https://dx.doi.org/10.21227/31pa-7837'
+ZONODO - 'https://doi.org/10.5281/zenodo.7630371'
+
+
+
+### Composition
 
 Datasets composition is as follows 
 
@@ -22,7 +42,7 @@ Datasets composition is as follows
 | Train | 3000    | 3000   |
 | Test  | 1000    | 1000   |
 
-Types of Malware according to NIST is  
+Types of Malware according to VIRUSTOTAL are given in the following table. 
 
 | **Type**          | **Train** | **Test** | **Type**    | **Train** | **Test** |
 |-------------------|-----------|----------|-------------|-----------|----------|
@@ -47,3 +67,29 @@ Types of Malware according to NIST is
 | installcore       | 5         | 2        | worm        | 202       | 68       |
 | installerex       | 1         | 0        | Unspecified | 333       | 23       |
 | kazy              | 2         | 0        |             |           |          |
+
+
+### Structure
+
+- Train_CFG
+  - Benign_CFG
+    - *.gpickle (x 3000)
+  - Malware_CFG
+    - *.gpickle (x 3000)
+  - mal_hashes_train.txt  (malware hash values for train set)
+- Test_CFG
+  - Benign_CFG
+    - *.gpickle (x 1000)
+  - Malware_CFG
+    - *.gpickle (x 1000)
+  - mal_hashes_test.txt (malware hash values for test set)
+- mal_hashes.txt (malware hash values)
+- class_labels_no_dupes.txt (class labels for benign and malware)
+
+### Usage
+The experiments showing curating and reading the dataset can be found at 
+"https://github.com/MSUSEL/unsupervised-graph/tree/main/Unsupervised%20clustering%20of%20CFG%20Files"
+
+A stable reproducible capsule is available at "https://codeocean.com/capsule/6978226/tree"
+
+<script src="https://codeocean.com/widget.js?slug=6978226" async></script> 
