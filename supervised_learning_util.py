@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.spatial.distance
 import sklearn as sk
 from matplotlib import pyplot as plt
 from sklearn import gaussian_process
@@ -11,838 +12,719 @@ from sklearn import discriminant_analysis
 from sklearn import metrics
 from sklearn import inspection
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import roc_curve, auc
+from scipy import spatial
 import os
 from g2v_util import TSNE_2D_plot
 import time
 from datetime import timedelta
+from concurrent.futures import ThreadPoolExecutor
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
+import pickle
+import warnings
+warnings.filterwarnings("ignore")
 
-def generate_k_nearest_neighbors(X, y, X_test, y_test):
-    #n_neighbors = [5, 10, 15, 20, 25, 30]
-    #n_neighbors = [30, 35, 45 ]
-    n_neighbors = [3, 5, 30 ] #, 45, 60, 100]
-    #weights = ['uniform', 'distance']
-    weights = ['distance']
-    algorithm = ['ball_tree']   #, 'kd_tree', 'brute', 'auto' ]
-    leaf_size = [5, 10, 15 ] #, 20, 25, 30, 35, 40, 45]# try smaller than 15 leaf size
-    #leaf_size = [5, 50, 80]
-    p = [ 1, 1.5, 2, 2.2, 2.5, 2.7, 3.0]
-    metric = ['minkowski']  # , 'cityblock', 'cosine', 'euclidean', 'haversine',
-    # 'manhattan', 'nan_euclidean' ]
-    # n_jobs = [1, -1]
-    
-    model_preds = []
+X_tr = ""
+y_tr = ""
+X_te = ""
+y_te = "" 
+
+def generate_k_nearest_neighbours(X, y, X_train, y_train, pre_optimized = False):
+       
     best_rec = ()
     pred_best = 0
     curr_score = 0
+    x_dim, y_dim  = X.shape 
     
-    for i in n_neighbors:
-        for j in p:
-            for k in leaf_size:
-                model = sk.neighbors.KNeighborsClassifier(n_neighbors=i,
-                                                          weights='distance',
-                                                          algorithm='ball_tree',
-                                                          leaf_size=k,
-                                                          p=j).fit(X, y)
-                y_pred = model.predict(X_test)
-                curr_score = sk.metrics.accuracy_score(y_test, y_pred)
-                model_preds.append((curr_score, i, "weights='distance'", "algorithm='ball_tree'", k, j))
-                if curr_score > pred_best:
-                    best_rec = (curr_score, i, "weights='distance'", "algorithm='ball_tree'", k, j)
-                    model1 = model
-                    pred_best = curr_score  
-    '''
-    for i in n_neighbors:
-        for j in weights:
-            for n in p:
-                for k in algorithm:
-                    if k == 'ball_tree' or k == 'kd_tree':
-                        for m in leaf_size:
-                            model = sk.neighbors.KNeighborsClassifier(n_neighbors=i,
-                                                                      weights=j,
-                                                                      algorithm=k,
-                                                                      leaf_size=m,
-                                                                      p=n)
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            model_preds.append((curr_score, i, j, k, m, n))
-                            if curr_score > pred_best:
-                                best_rec = (curr_score, i, j, k, m, n)
-                                model1 = model
-                                pred_best = curr_score
-                    else:
-                        model = sk.neighbors.KNeighborsClassifier(n_neighbors=i,
-                                                                  weights=j,
-                                                                  algorithm=k,
-                                                                  p=n)
-                        model.fit(X, y)
-                        curr_score = model.score(X_test, y_test)
-                        model_preds.append((curr_score, i, j, k, n))
-                        if curr_score > pred_best:
-                            best_rec = (curr_score, i, j, k, n)
-                            model1 = model
-                            pred_best = curr_score
-    '''
-    '''
-    parameters = {  'n_neighbors' : ( 3, 5, 30 ),
-                    'weights' : ['distance'],
-                    'algorithm' : ['ball_tree'],
-                    'leaf_size' :  ( 5, 10, 15 ), 
-                    'p' : ( 1, 2, 2.2, 2.5, 2.7, 3.0 ) }
-    knn = sk.neighbors.KNeighborsClassifier()
-    model1 = GridSearchCV(estimator=knn, param_grid=parameters)
+    if pre_optimized:
+        if y_dim == 2:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=38,
+                                                      weights='distance',
+                                                      metric='cityblock',
+                                                      n_jobs=-1)
+            best_rec = (38, 'distance', 'cityblock')
+        elif y_dim == 4:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=30,
+                                                      weights=squared_inverse,
+                                                      metric=scipy.spatial.distance.mahalanobis,
+                                                      metric_params={'VI': np.linalg.inv(np.cov(X_tr.T))},
+                                                      n_jobs=-1)
+            best_rec = (30, "squared_inverse", "scipy.spatial.distance.mahalanobis")
+        elif y_dim == 8:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=5,
+                                                      weights=squared_inverse,
+                                                      metric='cityblock',
+                                                      n_jobs=-1)
+            best_rec = (5, "squared_inverse", "cityblock")
+        elif y_dim == 16:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=12,
+                                                      weights=squared_inverse,
+                                                      metric=scipy.spatial.distance.sqeuclidean,
+                                                      n_jobs=-1)
+            best_rec = (12, 'squared_inverse', 'scipy.spatial.distance.sqeuclidean')
+        elif y_dim == 32:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=10,
+                                                      weights=squared_inverse,
+                                                      metric=scipy.spatial.distance.sqeuclidean,
+                                                      n_jobs=-1)
+            best_rec = (10, 'squared_inverse', 'scipy.spatial.distance.sqeuclidean')
+        elif y_dim == 64:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=8,
+                                                      weights=squared_inverse,
+                                                      metric=scipy.spatial.distance.correlation,
+                                                      n_jobs=-1)
+            best_rec = (8, 'squared_inverse', 'scipy.spatial.distance.correlation')
+        elif y_dim == 128:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=8,
+                                                      weights='distance',
+                                                      metric=scipy.spatial.distance.canberra,
+                                                      n_jobs=-1)
+            best_rec = (8, 'distance', 'scipy.spatial.distance.canberra')
+
+        elif y_dim == 256:
+            model = sk.neighbors.KNeighborsClassifier(n_neighbors=6,
+                                                      weights=squared_inverse,
+                                                      metric=scipy.spatial.distance.correlation,
+                                                      n_jobs=-1)
+            best_rec = (6, 'squared_inverse', 'scipy.spatial.distance.correlation')
+         
+        return model, best_rec
     
-    model1.fit(X, y)
-    #best_rec = model1.get_params()
-    '''
-    print(model_preds)
+    metric = [ scipy.spatial.distance.mahalanobis, scipy.spatial.distance.canberra,
+               scipy.spatial.distance.chebyshev, scipy.spatial.distance.correlation,
+               scipy.spatial.distance.sqeuclidean, 
+               'cityblock', 'cosine', 'euclidean']
+            
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    for n in metric:
+        fin_fut_objs.append(exe.submit(knn_par_metric_helper, n))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    fin_fut_objs = np.array(fin_fut_objs)
+    #clf_acc_high = max(fin_fut_objs[:,1])
+    clf_acc_high_idx = np.argmax(fin_fut_objs[:,1])
+    model1 = fin_fut_objs[clf_acc_high_idx][0]
+    best_rec = fin_fut_objs[clf_acc_high_idx][2]
     return model1, best_rec
 
-
-def generate_radius_nearest_neighbors(X, y, X_test, y_test):
-    radius = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-    weights = ['uniform', 'distance']
-    algorithm = ['ball_tree', 'kd_tree', 'brute']
-    leaf_size = [15, 20, 25, 30, 35, 40, 45]
-    p = [1, 2]
-    model_preds = []
-    best_rec = ()
+def knn_par_metric_helper(metric_passed): 
+    print(metric_passed)
+    #need to add cross-validation here
+    num_neigh = list(range(5,9))
+    
+    weights = ['distance', inverse_weights, squared_inverse]
     pred_best = 0
-    curr_score = 0
-    for i in radius:
-        for j in weights:
-            for m in p:
-                for k in algorithm:
-                    if k == 'ball_tree' or k == 'kd_tree':
-                        for l in leaf_size:
-                            model = sk.neighbors.RadiusNeighborsClassifier(radius=i,
-                                                                           weights=j,
-                                                                           algorithm=k,
-                                                                           leaf_size=l,
-                                                                           p=m,
-                                                                           outlier_label=1)
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            model_preds.append((curr_score, i, j, k, l, m))
-                            if curr_score > pred_best:
-                                best_rec = (curr_score, i, j, k, l, m)
-                                model1 = model
-                                pred_best = curr_score
-                    else:
-                        model = sk.neighbors.RadiusNeighborsClassifier(radius=i,
-                                                                       weights=j,
-                                                                       algorithm=k,
-                                                                       p=m,
-                                                                       outlier_label='most_frequent')
-                        model.fit(X, y)
-                        curr_score = model.score(X_test, y_test)
-                        model_preds.append((curr_score, i, j, k, m))
-                        if curr_score > pred_best:
-                            best_rec = (curr_score, i, j, k, m)
-                            model1 = model
-                            pred_best = curr_score
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_linear_svc(X, y, X_test, y_test):
-    penalty = ['l1', 'l2']
-    loss = ['hinge', 'squared_hinge']
-    dual = [True, False]
-    tol = [.001, 0.0001, .00001]
-    C = [.5, .6, .7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
-    # multi_class='ovr'
-    # fit_intercept=True1
-    # intercept_scaling=1
-    class_weight = None
-    # verbose=0
-    random_state = [1, 2, 3, 4, 5]
-    #max_iter = [1000, 2000, 3000]
-
-    model_preds = []
-    best_rec = ()
+    model1 = ""
+    best_rec = []
+    for j in num_neigh:
+        for m in weights:
+            print(metric_passed, j, m)
+            if metric_passed == scipy.spatial.distance.mahalanobis:
+                model = sk.neighbors.KNeighborsClassifier(n_neighbors=j,
+                                                          weights=m,
+                                                          metric=metric_passed,
+                                                          metric_params={'VI': np.linalg.inv(np.cov(X_tr.T))},
+                                                          n_jobs=-1).fit(X_tr,y_tr)
+                y_pred = model.predict(X_te)
+                curr_score = sk.metrics.accuracy_score(y_te, y_pred)
+            else:
+                model = sk.neighbors.KNeighborsClassifier(n_neighbors=j,
+                                                          weights=m,
+                                                          metric=metric_passed,
+                                                          n_jobs=-1).fit(X_tr,y_tr)
+                y_pred = model.predict(X_te)
+                curr_score = sk.metrics.accuracy_score(y_te, y_pred)
+            if curr_score > pred_best:
+                best_rec = (curr_score, metric_passed, j, m)
+                model1 = model
+                pred_best = curr_score 
+                print(model1, " ", pred_best, " ", best_rec)
+    return model1, pred_best, best_rec
+    
+def knn_par_neigh_helper(num_neigh):
+    print(num_neigh)
+    weights = ['distance',
+               inverse_weights, squared_inverse]
+    metric = [ scipy.spatial.distance.mahalanobis,
+               scipy.spatial.distance.chebyshev, scipy.spatial.distance.correlation,
+               scipy.spatial.distance.sqeuclidean, 
+               'cityblock', 'cosine', 'euclidean']
     pred_best = 0
-    curr_score = 0
+    model1 = ""
+    best_rec = []
+    for j in weights:
+        for m in metric:
+            print(num_neigh, j, m)
+            if m == scipy.spatial.distance.mahalanobis:
+                model = sk.neighbors.KNeighborsClassifier(n_neighbors=num_neigh,
+                                                          weights=j,
+                                                          metric=m,
+                                                          metric_params={'VI': np.linalg.inv(np.cov(X_tr.T))},
+                                                          n_jobs=-1).fit(X_tr,y_tr)
+                y_pred = model.predict(X_te)
+                curr_score = sk.metrics.accuracy_score(y_te, y_pred)
+            else:
+                model = sk.neighbors.KNeighborsClassifier(n_neighbors=num_neigh,
+                                                          weights=j,
+                                                          metric=m,
+                                                          n_jobs=-1).fit(X_tr,y_tr)
+                y_pred = model.predict(X_te)
+                curr_score = sk.metrics.accuracy_score(y_te, y_pred)
+            if curr_score > pred_best:
+                best_rec = (curr_score, num_neigh, j, m)
+                model1 = model
+                pred_best = curr_score 
+    #print("Completed: ", model1, " ", pred_best, " ", best_rec)
+    return model1, pred_best, best_rec
 
-    for i in penalty:
-        for j in loss:
-            if i == 'l1' and j == 'hinge':
-                continue
-            for m in tol:
-                for n in C:
-                    for k in dual:
-                        if k == True and not (i == 'l1' and j == 'squared_hinge'):
-                            for o in random_state:
-                                model = sk.svm.LinearSVC(penalty=i,
-                                                         loss=j,
-                                                         dual=k,
-                                                         tol=m,
-                                                         C=n,
-                                                         random_state=o)
-                                model.fit(X, y)
-                                curr_score = model.score(X_test, y_test)
-                                if curr_score > pred_best:
-                                    model1 = model
-                                    pred_best = curr_score
-                                    best_rec = (curr_score, i, j, k, m, n, o)
-                        elif k == False and not (i == 'l2', j == 'hinge'):
-                            model = sk.svm.LinearSVC(penalty=i,
-                                                     loss=j,
-                                                     dual=k,
-                                                     tol=m,
-                                                     C=n)
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            if curr_score > pred_best:
-                                model1 = model
-                                pred_best = curr_score
-                                best_rec = (curr_score, i, j, k, m, n)
+def inverse_weights(inpVec):
+    return 1/inpVec
 
-    #print(best_rec)
-    return model1, best_rec
+def squared_inverse(inpVec):
+    return 1/(inpVec)**2
 
 
-def generate_nu_svc(X, y, X_test, y_test):
-    nu = [.1, .2, .3, .4, .5]
-    # kernel= [ 'linear', 'rbf', 'sigmoid', 'precomputed', 'poly' ]
+def generate_svc(X, y, X_test, y_test, pre_optimized=False):
+    x_dim, y_dim  = X.shape 
+    
+    if pre_optimized:
+        if y_dim == 2:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='scale',
+                               tol=.01,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=scale', 'tol=.01') 
+        elif y_dim == 4:
+            model = sk.svm.SVC(C=10,
+                               kernel='poly',
+                               degree=5,
+                               gamma='auto',
+                               coef0=1.0,
+                               tol=.01,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=poly',  'C=10', 'degree=5', 'gamma=auto', 'coef0=1.0', 'tol=.01') 
+        elif y_dim == 8:
+            model = sk.svm.SVC(C=10,
+                               kernel='poly',
+                               degree=5,
+                               gamma='scale',
+                               coef0=1.0,
+                               tol=.001,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=poly',  'C=10', 'degree=5', 'gamma=scale', 'coef0=1.0', 'tol=.001') 
+        elif y_dim == 16:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='auto',
+                               tol=.001,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=auto', 'tol=.001')            
+        elif y_dim == 32:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='scale',
+                               tol=.01,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=scale', 'tol=.01') 
+        elif y_dim == 64:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='auto',
+                               tol=.01,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=auto', 'tol=.01') 
+        elif y_dim == 128:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='scale',
+                               tol=.001,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=scale', 'tol=.001')  
+        elif y_dim == 256:
+            model = sk.svm.SVC(C=10,
+                               kernel='rbf',
+                               gamma='auto',
+                               tol=.01,
+                               random_state = 25,
+                               probability=True,
+                               max_iter = -1)
+            best_rec = ('kernel=RBF',  'C=10', 'gamma=auto', 'tol=.01') 
+        return model, best_rec
+            
     kernel = ['linear', 'rbf', 'sigmoid', 'poly']
-    degree = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # for use only with poly kernel
-    gamma = ['scale', 'auto']  # for use only with rbf, poly and sigmoid
-    coef0 = [0.0, .5, 1.0]  # for use only with poly and sigmoid
-    shrinking = [True, False]
-    probability = [True, False]
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    for n in kernel:
+        fin_fut_objs.append(exe.submit(svc_par_helper, n))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    fin_fut_objs = np.array(fin_fut_objs)
+    #clf_acc_high = max(fin_fut_objs[:,1])
+    clf_acc_high_idx = np.argmax(fin_fut_objs[:,1])
+    model1 = fin_fut_objs[clf_acc_high_idx][0]
+    best_rec = fin_fut_objs[clf_acc_high_idx][2]
+         
+    #print(best_rec)
+    return model1, best_rec
+
+def svc_par_helper(passed_kernel):
+    model_preds = []
+    best_rec = ()
+    pred_best = 0
+    curr_score = 0
+    gamma = [ 'scale', 'auto']
+    C = [.1, 1, 10]
+    coef0 = [0.0, .5, 1.0]
     tol = [.01, 0.001, .0001]
-    cache_size = 200
-    class_weight = None
-    #max_iter = [1000, 2000, 3000, 4000]
-    # decision_function_shape='ovr', #for use with multiclass classification
-    # break_ties=False #for use with decision_function_shape
-    # random_state=None #ignored when probability is false
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in nu:
-        for j in shrinking:
-            for l in tol:
-                for m in probability:
-                    for k in kernel:
-                        if k == 'poly':
-                            for n in gamma:
-                                for o in coef0:
-                                    for p in degree:
-                                        model = sk.svm.NuSVC(nu=i,
-                                                             kernel=k,
-                                                             degree=p,
-                                                             gamma=n,
-                                                             coef0=o,
-                                                             shrinking=j,
-                                                             probability=m,
-                                                             tol=l,
-                                                             max_iter = 10000)
-                                        model.fit(X, y)
-                                        curr_score = model.score(X_test, y_test)
-                                        model_preds.append((curr_score, i, k, p, n, o, j, m, l))
-                                        if curr_score > pred_best:
-                                            model1 = model
-                                            pred_best = curr_score
-                                            best_rec = (curr_score, i, k, p, n, o, j, m, l)
-
-                        elif k == 'sigmoid':
-                            for n in gamma:
-                                for o in coef0:
-                                    model = sk.svm.NuSVC(nu=i,
-                                                         kernel=k,
-                                                         gamma=n,
-                                                         coef0=o,
-                                                         shrinking=j,
-                                                         probability=m,
-                                                         tol=l,
-                                                         max_iter=10000)
-                                    model.fit(X, y)
-                                    curr_score = model.score(X_test, y_test)
-                                    model_preds.append((curr_score, i, k, n, o, j, m, l))
-                                    if curr_score > pred_best:
-                                        model1 = model
-                                        pred_best = curr_score
-                                        best_rec = (curr_score, i, k, n, o, j, m, l)
-                        elif k == 'rbf':
-                            for n in gamma:
-                                model = sk.svm.NuSVC(nu=i,
-                                                     kernel=k,
-                                                     gamma=n,
-                                                     shrinking=j,
-                                                     probability=m,
-                                                     tol=l,
-                                                     max_iter=10000)
-                                model.fit(X, y)
-                                curr_score = model.score(X_test, y_test)
-                                model_preds.append((curr_score, i, k, n, j, m, l))
-                                if curr_score > pred_best:
-                                    model1 = model
-                                    pred_best = curr_score
-                                    best_rec = (curr_score, i, k, n, j, m, l)
-                        else:
-                            model = sk.svm.NuSVC(nu=i,
-                                                 kernel=k,
-                                                 shrinking=j,
-                                                 probability=m,
-                                                 tol=l,
-                                                 max_iter = 10000)
-                            # print (len(X[1]), len(y[1]))
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            model_preds.append((curr_score, i, k, j, m, l))
-                            if curr_score > pred_best:
-                                model1 = model
-                                pred_best = curr_score
-                                best_rec = (curr_score, i, k, j, m, l)
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_svc(X, y, X_test, y_test):
-    C = [.1, 1, 10, 100, 1000]
-    # kernel= [ 'linear', 'rbf', 'sigmoid', 'precomputed', 'poly' ]
-    kernel = ['linear', 'rbf', 'sigmoid', 'poly']
-    degree = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # for use only with poly kernel
-    gamma = ['scale', 'auto']  # for use only with rbf, poly and sigmoid
-    coef0 = [0.0, .5, 1.0]  # for use only with poly and sigmoid
-    shrinking = [True, False]
-    probability = [True, False]
-    tol = [.01, 0.001, .0001]
-    cache_size = 200
-    class_weight = None
-    #max_iter = [1000, 2000, 3000, 4000]
-    # decision_function_shape='ovr', #for use with multiclass classification
-    # break_ties=False #for use with decision_function_shape
-    # random_state=None #ignored when probability is false
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in C:
-        for j in shrinking:
-            for l in tol:
-                for m in probability:
-                    for k in kernel:
-                        if k == 'poly':
-                            for n in gamma:
-                                for o in coef0:
-                                    for p in degree:
-                                        model = sk.svm.SVC(C=i,
-                                                           kernel=k,
-                                                           degree=p,
-                                                           gamma=n,
-                                                           coef0=o,
-                                                           shrinking=j,
-                                                           probability=m,
-                                                           tol=l,
-                                                           max_iter = 10000)
-                                        model.fit(X, y)
-                                        curr_score = model.score(X_test, y_test)
-                                        model_preds.append((curr_score, i, k, p, n, o, j, m, l))
-                                        if curr_score > pred_best:
-                                            model1 = model
-                                            pred_best = curr_score
-                                            best_rec = (curr_score, i, k, p, n, o, j, m, l)
-
-                        elif k == 'sigmoid':
-                            for n in gamma:
-                                for o in coef0:
-                                        model = sk.svm.SVC(C=i,
-                                                           kernel=k,
-                                                           gamma=n,
-                                                           coef0=o,
-                                                           shrinking=j,
-                                                           probability=m,
-                                                           tol=l,
-                                                           max_iter = 10000)
-                                        model.fit(X, y)
-                                        curr_score = model.score(X_test, y_test)
-                                        model_preds.append((curr_score, i, k, n, o, j, m, l))
-                                        if curr_score > pred_best:
-                                            model1 = model
-                                            pred_best = curr_score
-                                            best_rec = (curr_score, i, k, n, o, j, m, l)
-                        elif k == 'rbf':
-                            for n in gamma:
-                                model = sk.svm.SVC(C=i,
-                                                   kernel=k,
-                                                   gamma=n,
-                                                   shrinking=j,
-                                                   probability=m,
-                                                   tol=l,
-                                                   max_iter = 10000)
-                                model.fit(X, y)
-                                curr_score = model.score(X_test, y_test)
-                                model_preds.append((curr_score, i, k, n, j, m, l))
-                                if curr_score > pred_best:
-                                    model1 = model
-                                    pred_best = curr_score
-                                    best_rec = (curr_score, i, k, n, j, m, l)
-                        else:
-                            model = sk.svm.SVC(C=i,
-                                               kernel=k,
-                                               shrinking=j,
-                                               probability=m,
-                                               tol=l,
-                                               max_iter = 10000)
-                            # print (len(X[1]), len(y[1]))
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            model_preds.append((curr_score, i, k, j, m, l))
-                            if curr_score > pred_best:
-                                model1 = model
-                                pred_best = curr_score
-                                best_rec = (curr_score, i, k, j, m, l)
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_gaussian_process(X, y, X_train, y_train):
-    # kernel= [ 'linear', 'rbf', 'sigmoid', 'poly' ]
-    optimizer = ['fmin_l_bfgs_b', None]
-    n_restarts_optimizer = [0, 5, 10, 100]
-    max_iter_predict = [100, 1000, 1000]
-    warm_start = [True, False]
-    copy_X_train = True  # playing with this is not likely necessary
-    random_state = None  # playing with this is not likely necessary
-    multi_class = 'one_vs_rest'  # for use with multiclass classification
-    n_jobs = None  # for use with parallel environments
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    # for i in kernel:
-    for j in optimizer:
-        for k in n_restarts_optimizer:
-            for l in warm_start:
-                for m in max_iter_predict:
-                    model = sk.gaussian_process.GaussianProcessClassifier(  # kernel = i,
-                        optimizer=j,
-                        n_restarts_optimizer=k,
-                        warm_start=l,
-                        max_iter_predict=m)
-                    model.fit(X, y)
-                    curr_score = model.score(X_train, y_train)
-                    model_preds.append((curr_score, j, k, l, m))
-                    if curr_score > pred_best:
-                        pred_best = curr_score
-                        best_rec = (curr_score, j, k, l, m)
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_decision_tree(X, y, X_test, y_test):
-    criterion = ['gini', 'entropy']  # , 'log_loss' ]
-    splitter = ['best', 'random']
-    max_depth = None  # large non-uniform graphs so leave as none
-    min_samples_split = [2, 12, 22]
-    min_samples_leaf = [1, 11, 21]
-    min_weight_fraction_leaf = 0.0  # used to add weights to particular leaves
-    max_features = ['auto', 'sqrt', 'log2']
-    random_state = None
-    max_leaf_nodes = None
-    min_impurity_decrease = [0.0, 1.0, 2.0, 3.0, 5.0, 10.0, 15.0]
-    class_weight = None
-    ccp_alpha = 0.0  # pruning parameter
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in criterion:
-        for j in splitter:
-            for k in min_samples_split:
-                for l in min_samples_leaf:
-                    for m in max_features:
-                        for n in min_impurity_decrease:
-                            model = sk.tree.DecisionTreeClassifier(criterion=i,
-                                                                   splitter=j,
-                                                                   min_samples_split=k,
-                                                                   min_samples_leaf=l,
-                                                                   max_features=m,
-                                                                   min_impurity_decrease=n)
-                            model.fit(X, y)
-                            curr_score = model.score(X_test, y_test)
-                            model_preds.append((curr_score, i, j, k, l, m, n))
-                            if curr_score > pred_best:
-                                best_rec = (curr_score, i, j, k, l, m, n)
-                                pred_best = curr_score
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_random_forest(X, y, X_test, y_test):
-    n_estimators = [50, 100, 150, 200, 250]
-    criterion = ['gini', 'entropy']
-    max_depth = None
-    min_samples_split = [2, 12]
-    min_samples_leaf = [1, 11]
-    min_weight_fraction_leaf = 0.0
-    max_features = ['sqrt', 'log2', 'auto']
-    max_leaf_nodes = None
-    min_impurity_decrease = [0.0, 1.0, 2.0, 3.0, 5.0, 10.0]
-    bootstrap = [True, False]
-    oob_score = [True, False]  # for use with bootrap = true
-    n_jobs = None  # parallel reqs
-    random_state = None  #
-    verbose = 0
-    warm_start = False
-    class_weight = None
-    ccp_alpha = 0.0  # parameter used for minimal cost-complexity pruning
-    max_samples = None
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in n_estimators:
-        for j in criterion:
-            for k in min_samples_split:
-                for l in min_samples_leaf:
-                    for m in max_features:
-                        for n in min_impurity_decrease:
-                            for o in bootstrap:
-                                if o == True:
-                                    for p in oob_score:
-                                        model = sk.ensemble.RandomForestClassifier(
-                                            n_estimators=i,
-                                            criterion=j,
-                                            min_samples_split=k,
-                                            min_samples_leaf=l,
-                                            max_features=m,
-                                            min_impurity_decrease=n,
-                                            bootstrap=o,
-                                            oob_score=p).fit(X, y)
-
-                                        curr_score = model.score(X_test, y_test)
-                                        model_preds.append((curr_score, i, j, k, l, m, n, o, p))
-                                        if curr_score > pred_best:
-                                            pred_best = curr_score
-                                            best_rec = (curr_score, i, j, k, l, m, n, o, p)
-                                else:
-                                    model = sk.ensemble.RandomForestClassifier(
-                                        n_estimators=i,
-                                        criterion=j,
-                                        min_samples_split=k,
-                                        min_samples_leaf=l,
-                                        max_features=m,
-                                        min_impurity_decrease=n,
-                                        bootstrap=o,
-                                        oob_score=p).fit(X, y)
-
-                                    curr_score = model.score(X_test, y_test)
-                                    model_preds.append((curr_score, i, j, k, l, m, n, o))
-                                    if curr_score > pred_best:
-                                        pred_best = curr_score
-                                        best_rec = (curr_score, i, j, k, l, m, n, o)
-
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_adaboost(X, y, X_test, y_test):
-    base_estimator = None  # change this to an array with the rest of the implemented classifiers
-    n_estimators = [50, 100, 150, 200]  # base_estimator 's default classifier is DecisionTreeClassifier
-    learning_rate = [.3, .5, 1.0, 3.0, 10.0, 100.0]
-    algorithm = ['SAMME', 'SAMME.R']
-    random_state = None  # only needes if base_estimator has random_state turned on
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for j in n_estimators:
-        for k in learning_rate:
-            for l in algorithm:
-                model = sk.ensemble.AdaBoostClassifier(n_estimators=j,
-                                                       learning_rate=k,
-                                                       algorithm=l).fit(X, y)
-                curr_score = model.score(X_test, y_test)
-                model_preds.append((curr_score, j, k))
-                if curr_score > pred_best:
-                    pred_best = curr_score
-                    best_rec = (curr_score, j, k)
-    #print(best_rec)
-    return model1, best_rec
-
-
-# note that this returned .2275 on initial trial run
-def generate_gaussian_naive_bayes(X, y, X_test, y_test):
-    var_smoothing = [1 * 10**(-1), 1 * 10**(-3), 1 * 10**(-9), 1*10**(-11), 1 * 10**(-13)]
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in var_smoothing:
-        model = sk.naive_bayes.GaussianNB(var_smoothing=i).fit(X, y)
-        curr_score = model.score(X_test, y_test)
-        model_preds.append((curr_score, i))
-        if curr_score > pred_best:
-            best_rec = (curr_score, i)
-            pred_best = curr_score
-
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_multinomial_naive_bayes(X, y, X_test, y_test):
-    alpha = [0, .5, 1, 1.5, 5, 10]  # no smoothing ensured when this is 0 and
-    force_alpha = [True, False]  # force_alpha is set to True
-    fit_prior = [True, False]
-    class_prior = None  # an array of prior probabilities
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in alpha:
-        for j in force_alpha:
-            # for k in fit_prior:
-            model = sk.naive_bayes.MultinomialNB(alpha=i
-                                                 # force_alpha = j
-                                                 ).fit(X, y)
-            curr_score = model.score(X_test, y_test)
-            model_preds.append((curr_score, i))
-            if curr_score > pred_best:
-                pred_best = curr_score
-                best_rec = (curr_score, i)
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_complement_naive_bayes(X, y, X_test, y_test):
-    alpha = [0, .5, 1, 1.5, 5, 10]  # no smoothing ensured when this is 0 and
-    force_alpha = [True, False]  # force_alpha is set to True
-    norm = [True, False]
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in alpha:
-        for j in norm:
-            model = sk.naive_bayes.ComplementNB(alpha=i,
-                                                norm=j).fit(X, y)
-            curr_score = model.score(X_test, y_test)
-            model_preds.append((curr_score, i, j))
-            if curr_score > pred_best:
-                pred_best = curr_score
-                best_rec = (curr_score, i, j)
-
-    #print(best_rec)
-    return model1, best_rec
-
-
-# not working atm
-def generate_categorical_naive_bayes(X, y, X_test, y_test):
-    # alpha = [ 0, .5, 1, 1.5, 5 ] #no smoothing ensured when this is 0 and
-    # force_alpha = [ True, False ]
-    # min_categories= [ None  ]
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    print(len(X), len(X_test))
-    print(len(y), len(y_test))
-    '''
-    for i in alpha:
-        for j in min_categories:
-            model = sk.naive_bayes.CategoricalNB(alpha=i, min_categories = j).fit(X,y)
-            curr_score = model.score(X_test, y_test)
-            model_preds.append((curr_score, i, j))
-            if curr_score > pred_best:
-                pred_best = curr_score
-                best_rec = (curr_score, i, j)    
-    '''
-    best_rec = sk.naive_bayes.CategoricalNB().fit(X, y).score(X_test, y_test)
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_qda(X, y, X_test, y_test):
-    reg_param = [0.0, .1, .2, .3, .4, .5, .6, .7, .8, .9]
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in reg_param:
-        model = sk.discriminant_analysis.QuadraticDiscriminantAnalysis(reg_param=i).fit(X, y)
-        curr_score = model.score(X_test, y_test)
-        model_preds.append((curr_score, i))
-        if curr_score > pred_best:
-            pred_best = curr_score
-            best_rec = (curr_score, i)
-
-    #print(best_rec)
-    return model1, best_rec
-
-
-def generate_lda(X, y, X_test, y_test):
-    solver = ['svd', 'lsqr', 'eigen']
-    shrinkage = [0.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 'auto']  # only for use with lsqr and eigen
-    tol = [1 * 10**-1, 1 * 10**-2, 1 * 10**-3, 1 * 10**-4, 1 * 10**-5, 1 * 10**-6, 1 * 10**-7, 1 * 10**-8,
-           1 * 10**-9]
-    # tol is only for use with svd
-    # estimate_covariance: look into this parameter
-
-    model_preds = []
-    best_rec = ()
-    pred_best = 0
-    curr_score = 0
-
-    for i in solver:
-        if i == 'svd':
+    if passed_kernel == 'linear':
+        for i in C:
             for j in tol:
-                model = sk.discriminant_analysis.LinearDiscriminantAnalysis(solver=i,
-                                                                            tol=j).fit(X, y)
-                curr_score = model.score(X_test, y_test)
-                model_preds.append((curr_score, i, j))
+                print((passed_kernel, i, j))
+                model = sk.svm.SVC(C=i,
+                                   kernel=passed_kernel,
+                                   tol=j,
+                                   random_state = 25,
+                                   probability=True,
+                                   max_iter = -1)
+                model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+                curr_score = model_scores.mean()
+                model_preds.append((curr_score, passed_kernel, i, j))
+                print((curr_score, passed_kernel, i, j))
                 if curr_score > pred_best:
+                    model1 = model
                     pred_best = curr_score
-                    best_rec = (curr_score, i, j)
-        elif i == 'lsqr' or i == 'eigen':
-            for k in shrinkage:
-                model = sk.discriminant_analysis.LinearDiscriminantAnalysis(solver=i,
-                                                                            shrinkage=k).fit(X, y)
-                curr_score = model.score(X_test, y_test)
-                model_preds.append((curr_score, i, k))
-                if curr_score > pred_best:
-                    pred_best = curr_score
-                    best_rec = (curr_score, i, k)
+                    best_rec = (curr_score, passed_kernel, i, j) 
+    elif passed_kernel == 'rbf':
+        for i in C:
+            for j in gamma:
+                for k in tol:
+                    print((passed_kernel, i, j, k))
+                    model = sk.svm.SVC(C=i,
+                                       kernel=passed_kernel,
+                                       gamma=j,
+                                       tol=k,
+                                       random_state = 25,
+                                       probability=True,
+                                       max_iter = -1)
+                    model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+                    curr_score = model_scores.mean()
+                    model_preds.append((curr_score, passed_kernel, i, j, k))
+                    print((curr_score, passed_kernel, i, j, k))
+                    if curr_score > pred_best:
+                        model1 = model
+                        pred_best = curr_score
+                        best_rec = (curr_score, passed_kernel, i, j, k) 
+    elif passed_kernel == 'sigmoid':
+        for i in C:
+            for j in gamma:
+                for k in coef0:
+                    for l in tol:
+                        print((passed_kernel, i, j, k, l))
+                        model = sk.svm.SVC(C=i,
+                                           kernel=passed_kernel,
+                                           gamma=j,
+                                           coef0=k,
+                                           tol=l,
+                                           random_state = 25,
+                                           probability=True,
+                                           max_iter = -1)
+                        model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+                        curr_score = model_scores.mean()
+                        model_preds.append((curr_score, passed_kernel, i, j, k, l))
+                        print((curr_score, passed_kernel, i, j, k, l))
+                        if curr_score > pred_best:
+                            model1 = model
+                            pred_best = curr_score
+                            best_rec = (curr_score, passed_kernel, i, j, k, l) 
+    elif passed_kernel == 'poly':
+        degree = [1,2,3,5]
+        for i in degree:
+            for j in C:
+                for k in gamma:
+                    for l in coef0:
+                        for m in tol:
+                            print(passed_kernel, i, j, k, l, m)
+                            model = sk.svm.SVC(C=j,
+                                               kernel=passed_kernel,
+                                               degree=i,
+                                               gamma=k,
+                                               coef0=l,
+                                               tol=m,
+                                               random_state = 25,
+                                               probability=True,
+                                               max_iter = -1)
+                            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+                            curr_score = model_scores.mean()
+                            model_preds.append((curr_score, passed_kernel, j, i, k, l, m))
+                            print((curr_score, passed_kernel, j, i, k, l, m))
+                            if curr_score > pred_best:
+                                model1 = model
+                                pred_best = curr_score
+                                best_rec = (curr_score, passed_kernel, j, i, k, l, m) 
+    return model1, pred_best, best_rec
 
-    #print(best_rec)
+
+def generate_gaussian_process(X, y, X_test, y_test, pre_optimized = False):
+    x_dim, y_dim = X.shape
+    if pre_optimized:
+        if y_dim == 2:
+            kernel_passed = sk.gaussian_process.kernels.RationalQuadratic(alpha=2.5, length_scale=.5)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            best_rec = ('RationalQuadratic', 'alpha=2.5', 'length_scale=.5')
+        elif y_dim == 4:
+            kernel_passed = sk.gaussian_process.kernels.RationalQuadratic(alpha=2.5, length_scale=1)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            best_rec = ('RationalQuadratic', 'alpha=2.5', 'length_scale=1')
+        elif y_dim == 8:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(gamma=.8, metric='poly')
+            model1 = sk.gaussian_process.GaussianProcessClassifier( kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=poly', 'gamma=.8')
+        elif y_dim == 16:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='poly', gamma=.653)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                     optimizer='fmin_l_bfgs_b',
+                                                                     n_restarts_optimizer=0,
+                                                                     warm_start=True,
+                                                                     max_iter_predict=100,
+                                                                     random_state=25,
+                                                                     n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=poly', 'gamma=.8')
+        elif y_dim == 32:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='polynomial', gamma=.6538)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                     optimizer='fmin_l_bfgs_b',
+                                                                     n_restarts_optimizer=0,
+                                                                     warm_start=True,
+                                                                     max_iter_predict=100,
+                                                                     random_state=25,
+                                                                     n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=polynomial', 'gamma=.6538')
+        elif y_dim == 64:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='polynomial', gamma=.5)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                     optimizer='fmin_l_bfgs_b',
+                                                                     n_restarts_optimizer=0,
+                                                                     warm_start=True,
+                                                                     max_iter_predict=100,
+                                                                     random_state=25,
+                                                                     n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=polynomial', 'gamma=.5')
+        elif y_dim == 128:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='polynomial', gamma=.5)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                     optimizer='fmin_l_bfgs_b',
+                                                                     n_restarts_optimizer=0,
+                                                                     warm_start=True,
+                                                                     max_iter_predict=100,
+                                                                     random_state=25,
+                                                                     n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=polynomial', 'gamma=.5')
+        elif y_dim == 256:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='polynomial', gamma=1.2)
+            model1 = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                     optimizer='fmin_l_bfgs_b',
+                                                                     n_restarts_optimizer=0,
+                                                                     warm_start=True,
+                                                                     max_iter_predict=100,
+                                                                     random_state=25,
+                                                                     n_jobs=-1) 
+            best_rec = ('PairwiseKernel', 'metric=polynomial', 'gamma=1.2')
+        
+        return model1, best_rec
+    
+        
+    #kernel = ['RBF', 'matern', 'rationalquadratic', 'dotproduct', 'linear', 'poly', 'polynomial', 'laplacian', 'sigmoid', 'cosine' , 'None']  
+    
+    gamma = [  1.221, 1.222, 1.223, 1.224, 1.225, 1.226, 1.227, 1.228, 1.229 ]    
+
+    #mult = [ 1.0, 2.0, 3.0 , 4.0, 5.0, 6.0, 7.0, 8.0]
+    
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    for n in gamma:
+        fin_fut_objs.append(exe.submit(gp_poly_helper, n))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    fin_fut_objs = np.array(fin_fut_objs)
+    #clf_acc_high = max(fin_fut_objs[:,1])
+    clf_acc_high_idx = np.argmax(fin_fut_objs[:,1])
+    model1 = fin_fut_objs[clf_acc_high_idx][0]
+    best_rec = fin_fut_objs[clf_acc_high_idx][2]
+         
     return model1, best_rec
 
+def gp_rbf_helper(mult):
+    kernel_passed = mult * sk.gaussian_process.kernels.RBF(1.0) 
+    model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                            optimizer='fmin_l_bfgs_b',
+                                                            n_restarts_optimizer=0,
+                                                            warm_start=False,
+                                                            max_iter_predict=100,
+                                                            random_state=25,
+                                                            n_jobs=-1) 
+    print("Fitting model: ", kernel_passed)
+    model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+    curr_score = model_scores.mean()
+    print(kernel_passed, curr_score, gamma)
+    best_rec = (kernel_passed, curr_score, gamma)
+    
+    return model, curr_score, best_rec
 
-# not implemented yet
-def generate_MLP(X, y, X_test, y_test):
-    hidden_layer_sizes= [ (50, ), (100,), (150, ) ]
-    activation= [ 'identity', 'logistic', 'tanh', 'relu' ]
-    solver= [ 'lbfgs', 'sgd', 'adam' ]
-    alpha= [ 0.001 , 0.0001, .00001 ]
-    batch_size='auto' # will not be taken into account if solver = lbfgs
-    learning_rate= [ 'constant', 'invscaling', 'adaptive' ]
-    learning_rate_init=[ .1, 0.001, .00001 ] # only used when solver = 'sgd' or 'adam'
-    power_t= [ .3, 0.5, .7 ] # only used when solver='lbfgs', and learning_rate = 'invscaling'
-    max_iter=200
-    shuffle= [ True, False ] #only used when solver='sgd' or 'adam'
-    random_state=None
-    tol= [ .001, 0.0001, .00001 ]
-    verbose=False
-    warm_start=False
-    momentum= [ .3, .5, .7, 0.9 ] #only used when solver = 'sgd'
-    nesterovs_momentum= [ True, False ]
-    early_stopping= [True, False ]
-    validation_fraction= [ 0.1 , 0.3 ]
-    beta_1= 0.9   #only used when solver='adam'
-    beta_2= 0.999 #only used when solver='adam'
-    epsilon=1e-08 #only used when solver = 'adam' or 'sgd'
-    n_iter_no_change=10
-    max_fun=15000 #only used when solver = 'lbfgs'
-    model = sk.neural_network.MLPClassifier(hidden_layer_sizes=hidden_layer_sizes,
-                                            activation=activation,
-                                            solver=solver,
-                                            alpha=alpha,
-                                            batch_size=batch_size,
-                                            learning_rate=learning_rate,
-                                            learning_rate_init=learning_rate_init,
-                                            power_t=power_t,
-                                            max_iter=max_iter,
-                                            shuffle=shuffle,
-                                            random_state=random_state,
-                                            tol=tol,
-                                            verbose=verbose,
-                                            warm_start=warm_start,
-                                            momentum=momentum,
-                                            nesterovs_momentum=nesterovs_momentum,
-                                            early_stopping=early_stopping,
-                                            validation_fraction=validation_fraction,
-                                            beta_1=beta_1,
-                                            beta_2=beta_2,
-                                            epsilon=epsilon,
-                                            n_iter_no_change=n_iter_no_change,
-                                            max_fun=max_fun)
-    return model
+def gp_poly_helper(gamma):
+    kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(gamma=gamma, metric='poly')
+    model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                            optimizer='fmin_l_bfgs_b',
+                                                            n_restarts_optimizer=0,
+                                                            warm_start=True,
+                                                            max_iter_predict=100,
+                                                            random_state=25,
+                                                            n_jobs=-1) 
+    print("Fitting model: ", kernel_passed)
+    model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+    curr_score = model_scores.mean()
+    print(kernel_passed, curr_score, gamma)
+    best_rec = (kernel_passed, curr_score, gamma)
+    return model, curr_score, best_rec
+
+def gp_par_helper(kernel_passed):
+    model1 = ""
+    best_rec = ()
+    pred_best = 0
+    curr_score = 0
+    
+    if kernel_passed == 'RBF':
+        length_scale = [ 1.4 ]
+        for i in length_scale:
+            kernel_passed = sk.gaussian_process.kernels.RBF(length_scale = i)
+            model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            print("Fitting model: ", kernel_passed)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, kernel_passed, i)
+                model1 = model
+                pred_best = curr_score 
+            print(kernel_passed, curr_score, i)
+    elif kernel_passed == 'matern': 
+        length_scale = [ .4]
+        nu = [1.1,1.2,1.3,1.4,1.5]
+        for i in length_scale:
+            for j in nu:
+                kernel_passed = sk.gaussian_process.kernels.Matern(length_scale = i, nu = j)
+                model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                        optimizer='fmin_l_bfgs_b',
+                                                                        n_restarts_optimizer=0,
+                                                                        warm_start=True,
+                                                                        max_iter_predict=100,
+                                                                        random_state=25,
+                                                                        n_jobs=-1) 
+            print("Fitting model: ", kernel_passed)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, kernel_passed, i, j)
+                model1 = model
+                pred_best = curr_score 
+            print(kernel_passed, curr_score, i, j)
+                
+    elif kernel_passed == 'rationalquadratic': 
+        length_scale = [ .5]
+        alpha = [5,5.1,5.2,5.3,5.4,5.5]
+        for i in length_scale:
+            for j in alpha:
+                kernel_passed = sk.gaussian_process.kernels.RationalQuadratic(length_scale = i, alpha = j)
+                model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                        optimizer='fmin_l_bfgs_b',
+                                                                        n_restarts_optimizer=0,
+                                                                        warm_start=True,
+                                                                        max_iter_predict=100,
+                                                                        random_state=25,
+                                                                        n_jobs=-1) 
+            print("Fitting model: ", kernel_passed)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, kernel_passed, i, j)
+                model1 = model
+                pred_best = curr_score 
+            print(kernel_passed, curr_score, i, j)
+    elif kernel_passed == 'None':
+        model = sk.gaussian_process.GaussianProcessClassifier(  kernel = None,
+                                                                optimizer='fmin_l_bfgs_b',
+                                                                n_restarts_optimizer=0,
+                                                                warm_start=True,
+                                                                max_iter_predict=100,
+                                                                random_state=25,
+                                                                n_jobs=-1) 
+        print("Fitting model: ", kernel_passed)
+        model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+        curr_score = model_scores.mean()
+        if curr_score > pred_best:
+            best_rec = (curr_score, kernel_passed)
+            model1 = model
+            pred_best = curr_score 
+        print(kernel_passed, curr_score)
+    elif kernel_passed == 'dotproduct': 
+        #sigma = [2,4,6,8,10]
+        #for i in sigma:
+        kernel_passed = sk.gaussian_process.kernels.DotProduct()
+        model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+        print("Fitting model: ", kernel_passed)
+        model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+        curr_score = model_scores.mean()
+        if curr_score > pred_best:
+            best_rec = (curr_score, kernel_passed)
+            model1 = model
+            pred_best = curr_score 
+        print(kernel_passed, curr_score)
+    elif kernel_passed == 'linear': 
+        #gamma = [.5, 1, 1.5]
+        #for i in gamma:
+        kernel_passed = sk.gaussian_process.kernels.PairwiseKernel( metric='linear')
+        model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+        print("Fitting model: ", kernel_passed)
+        model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+        curr_score = model_scores.mean()
+        if curr_score > pred_best:
+            best_rec = (curr_score, kernel_passed)
+            model1 = model
+            pred_best = curr_score 
+        print(kernel_passed, curr_score)
+    elif kernel_passed == 'poly': 
+        gamma = [.1,.2,.3,.4,.5,.6,.7, 1.2, 1.3, 1.4, 1.5, 1.6]
+        for i in gamma:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(gamma=i, metric='poly')
+            model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            print("Fitting model: ", kernel_passed)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, kernel_passed, i)
+                model1 = model
+                pred_best = curr_score 
+            print(kernel_passed, curr_score, i)
+    elif kernel_passed == 'polynomial': 
+        gamma = [.7,.8,.9, 1, 1.1, 1.2]
+        for i in gamma:
+            kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(gamma=i, metric='polynomial')
+            model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+            print("Fitting model: ", kernel_passed)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, kernel_passed, i)
+                model1 = model
+                pred_best = curr_score 
+            print(kernel_passed, curr_score, i)
+    elif kernel_passed == 'laplacian': 
+        #gamma = [.5, 1, 1.5]
+        #for i in gamma:
+        kernel_passed = sk.gaussian_process.kernels.PairwiseKernel(metric='laplacian')
+        model = sk.gaussian_process.GaussianProcessClassifier(  kernel = kernel_passed,
+                                                                    optimizer='fmin_l_bfgs_b',
+                                                                    n_restarts_optimizer=0,
+                                                                    warm_start=True,
+                                                                    max_iter_predict=100,
+                                                                    random_state=25,
+                                                                    n_jobs=-1) 
+        print("Fitting model: ", kernel_passed)
+        model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+        curr_score = model_scores.mean()
+        if curr_score > pred_best:
+            best_rec = (curr_score, kernel_passed)
+            model1 = model
+            pred_best = curr_score 
+        print(kernel_passed, curr_score)
+        
+    return model1, pred_best, best_rec
 
 
 def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test):
+    global X_tr, y_tr, X_te, y_te
+    X_tr = X_train
+    y_tr = y_train
+    X_te = X_test
+    y_te = y_test
     if alg == 'knn':
         start_time = time.monotonic()
-        model, best_rec = generate_k_nearest_neighbors(X_train, y_train, X_test, y_test)
+        model, best_rec = generate_k_nearest_neighbours(X_train, y_train, X_test, y_test, pre_optimized=True)
         training_time = timedelta(seconds=time.monotonic()-start_time)
-    elif alg == 'rnn':
-        start_time = time.monotonic()
-        model, best_rec = generate_radius_nearest_neighbors(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic()-start_time)
-    elif alg == 'lsvc':
-        start_time = time.monotonic()
-        model, best_rec = generate_linear_svc(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'nsvc':
-        start_time = time.monotonic()
-        model, best_rec = generate_nu_svc(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'svc':
         start_time = time.monotonic()
-        model, best_rec = generate_svc(X_train, y_train, X_test, y_test)
+        model, best_rec = generate_svc(X_train, y_train, X_test, y_test, pre_optimized=True)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'gp':
         start_time = time.monotonic()
-        model, best_rec = generate_gaussian_process(X_train, y_train, X_train, y_train)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'dt':
-        start_time = time.monotonic()
-        model, best_rec = generate_decision_tree(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'rf':
-        start_time = time.monotonic()
-        model, best_rec = generate_random_forest(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'ada':
-        start_time = time.monotonic()
-        model, best_rec = generate_adaboost(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'gnb':
-        start_time = time.monotonic()
-        model, best_rec = generate_gaussian_naive_bayes(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'mnb':
-        start_time = time.monotonic()
-        model, best_rec = generate_multinomial_naive_bayes(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'compnb':
-        start_time = time.monotonic()
-        model, best_rec = generate_complement_naive_bayes(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'catnb':
-        start_time = time.monotonic()
-        model, best_rec = generate_categorical_naive_bayes(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'qda':
-        start_time = time.monotonic()
-        model, best_rec = generate_qda(X_train, y_train, X_test, y_test)
-        training_time = timedelta(seconds=time.monotonic() - start_time)
-    elif alg == 'lda':
-        start_time = time.monotonic()
-        model, best_rec = generate_lda(X_train, y_train, X_test, y_test)
+        model, best_rec = generate_gaussian_process(X_train, y_train, X_test, y_test, pre_optimized=True)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     return model, best_rec, training_time
 
@@ -850,68 +732,69 @@ def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test):
 def plain_clf_runner(alg, X, y):
     if alg == 'knn':
         start_time = time.monotonic()
-        model = sk.neighbors.KNeighborsClassifier().fit(X, y)
+        model = sk.neighbors.KNeighborsClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'rnn':
         start_time = time.monotonic()
-        model = sk.neighbors.RadiusNeighborsClassifier(outlier_label=1, radius=25).fit(X, y)
+        model = sk.neighbors.RadiusNeighborsClassifier(outlier_label=1, radius=25)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'lsvc':
         start_time = time.monotonic()
-        model = sk.svm.LinearSVC().fit(X, y)
+        model = sk.svm.LinearSVC()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'nsvc':
         start_time = time.monotonic()
-        model = sk.svm.NuSVC().fit(X, y)
+        model = sk.svm.NuSVC()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'svc':
         start_time = time.monotonic()
-        model = sk.svm.SVC().fit(X, y)
+        model = sk.svm.SVC(probability=True)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'gp':
         start_time = time.monotonic()
-        model = sk.gaussian_process.GaussianProcessClassifier().fit(X, y)
+        model = sk.gaussian_process.GaussianProcessClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'dt':
         start_time = time.monotonic()
-        model = sk.tree.DecisionTreeClassifier().fit(X, y)
+        model = sk.tree.DecisionTreeClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'rf':
         start_time = time.monotonic()
-        model = sk.ensemble.RandomForestClassifier().fit(X, y)
+        model = sk.ensemble.RandomForestClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'ada':
         start_time = time.monotonic()
-        model = sk.ensemble.AdaBoostClassifier().fit(X, y)
+        model = sk.ensemble.AdaBoostClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'gnb':
         start_time = time.monotonic()
-        model = sk.naive_bayes.GaussianNB().fit(X, y)
+        model = sk.naive_bayes.GaussianNB()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'mnb':
         start_time = time.monotonic()
-        model = sk.naive_bayes.MultinomialNB().fit(X, y)
+        model = sk.naive_bayes.MultinomialNB()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'compnb':
         start_time = time.monotonic()
-        model = sk.naive_bayes.ComplementNB().fit(X, y)
+        model = sk.naive_bayes.ComplementNB()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'catnb':
         start_time = time.monotonic()
-        model = sk.naive_bayes.CategoricalNB().fit(X, y)
+        model = sk.naive_bayes.CategoricalNB()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'qda':
         start_time = time.monotonic()
-        model = sk.discriminant_analysis.QuadraticDiscriminantAnalysis().fit(X, y)
+        model = sk.discriminant_analysis.QuadraticDiscriminantAnalysis()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'lda':
         start_time = time.monotonic()
-        model = sk.discriminant_analysis.LinearDiscriminantAnalysis().fit(X, y)
+        model = sk.discriminant_analysis.LinearDiscriminantAnalysis()
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'mlp':
         start_time = time.monotonic()
-        model = sk.neural_network.MLPClassifier().fit(X, y)
+        model = sk.neural_network.MLPClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
+
     return model, training_time
 
 
@@ -952,111 +835,175 @@ def classifier_name_expand(alg):
         alg = 'Multilayer Perceptron'
     return alg
 
-def supervised_methods_evaluation(alg, model, X_test, y_test, ndim,
-                                  X_train_size, y_train_size, output_path, training_time, optimized=False, optimizing_tuple=None):
+def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
+                                  X_train_size, y_train_size, output_path, training_time,optimized=False, optimizing_tuple=None):
+    
     start_time = time.monotonic()
-    y_pred = model.predict(X_test)
+    acc_scores = cross_val_score(model, X, y, cv = 5, n_jobs = -1 )
+    training_time = timedelta(seconds=time.monotonic() - start_time)
+    
+    start_time = time.monotonic()
+    y_pred = model.fit(X,y).predict(X_test)
     prediction_time = timedelta(seconds=time.monotonic() - start_time)
-    output_file_path = output_path + "supervised_methods_evaluation_results/"
-
+    
+    #output_file_path = output_path + "supervised_methods_evaluation_results/" + alg + "/"
+    output_path = output_path + "supervised_methods_evaluation_results/" + alg + "/"
     #for dummy testing
     #output_file_path = output_path + "supervised_methods_evaluation_results/dummy_"
 
     if optimized:
-        output_file_path = output_file_path + alg + "_" + str(ndim) + "-dims_optimized_" + "results.txt"
+        output_path = output_path + "/optimized_results/"  
+        summary_file_path = output_path + alg + "_summary_optimized.csv"
+        output_file_path = output_path + alg + "_" + str(ndim) + "-dims_optimized_" + "results.txt"
+        roc_data_path = output_path + alg + "_" + str(ndim) + "-dims_optimized_" + "roc_data.csv"
         #output_file_path = output_file_path + "dummy_" + alg + "_" + str(ndim) + "-dims_optimized_" + "results.txt"
         #print(output_file_path)
     else:
-        output_file_path = output_file_path + alg + "_" + str(ndim) + "-dims_" + "results.txt"
-        #output_file_path = output_file_path + "dummy_" + alg + "_" + str(ndim) + "-dims_" + "results.txt"
+        output_path = output_path + "/plain_results/"
+        summary_file_path = output_path + alg + "_summary_plain.csv"
+        output_file_path = output_path + alg + "_" + str(ndim) + "-dims_" + "results.txt"
+        roc_data_path = output_path + alg + "_" + str(ndim) + "-dims_" + "roc_data.csv"
+        
+        #output_file_path = outpu-t_file_path + "dummy_" + alg + "_" + str(ndim) + "-dims_" + "results.txt"
         #print("\n" + output_file_path)
 
-    os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+    os.makedirs(os.path.dirname(summary_file_path), exist_ok=True)
 
     output_file = open(output_file_path, "w")
-
-    #print("\nClassifier: ", alg)
+    output_file2 = open(summary_file_path, "a")
+    output_file3 = open(roc_data_path, "a")
+    
     output_file.write("Classifier Name: " + classifier_name_expand(alg))
+    output_file2.write(classifier_name_expand(alg) + ", ")
 
     if optimized:
         output_file.write("\nOptimizing Tuple: " + str(optimizing_tuple))
+        output_file2.write(str(optimizing_tuple) + ", ")
 
     output_file.write("\nVector Input Dimensions: " + str(ndim))
+    output_file2.write(str(ndim) + ", ")
 
-    output_file.write("\nTraining Time: " + str(training_time))
+    output_file.write("\nTraining Time: " + str(training_time) + ", ")
 
-    output_file.write("\nPrediction Time: " + str(prediction_time))
-
+    output_file.write("\nPrediction Time: " + str(prediction_time) + ", ")
+    
+    
+    output_file.write("\nAccuracy Scores During Training: " + str(acc_scores))
+    output_file.write("\nAccuracy Scores Mean During Training: " + str(acc_scores.mean()))
+    output_file.write("\nAccuracy Scores Standard Deviation During Training: " + str(acc_scores.std()))
+    
+    output_file2.write(str(acc_scores) + ", " + str(acc_scores.mean()) + str(acc_scores.std()) )
+    
     accScore = sk.metrics.accuracy_score(y_test, y_pred)
-    output_file.write("\nAccuracy Score: " + str(accScore))
+    output_file.write("\nAccuracy Score on Test Set: " + str(accScore))
+    
+    output_file2.write(str(acc_scores.mean()) + ", ")
+    output_file2.write(str(acc_scores.std()) + ", ")
+    output_file2.write(str(acc_scores) + ", ")
     #print("Accuracy Score: ", accScore)
 
-    skScore = model.score(X_test, y_test)
-    output_file.write("\nModel Score: " + str(skScore))
+    preScore = sk.metrics.precision_score(y_test, y_pred)
+    output_file.write("\nPrecision Score: " + str(preScore))
+    output_file2.write(str(preScore) + ", ")
     
-    cr = sk.metrics.classification_report(y_test, y_pred)
-    output_file.write("\nClassification Report: \n" + str(cr))
-    #print("Classification Report: \n", cr)
+    recScore = sk.metrics.recall_score(y_test, y_pred)
+    output_file.write("\nRecall Score: " + str(recScore))
+    output_file2.write(str(recScore) + ", ")                  
+                      
+    f1Score = sk.metrics.recall_score(y_test, y_pred)
+    output_file.write("\nF1 Score: " + str(f1Score))
+    output_file2.write(str(f1Score) + ", ")                       
 
     cm = sk.metrics.confusion_matrix(y_test, y_pred)
     output_file.write("\nConfusion Matrix: \n" + str(cm))
-    #print("Confusion Matrix: \n", cm)
-    #cmdisp = sk.metrics.ConfusionMatrixDisplay(cm)
-    #cmdisp.plot()
+    cmdisp = sk.metrics.ConfusionMatrixDisplay(cm, display_labels=['Benign', 'Malignant'])
+    cmdisp.plot()
+    plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions Confusion Matrix")
+    plt.savefig(output_path + alg + "_" + str(ndim) + "-dims_" + "cm.png")
+    plt.close()
     #plt.show(block=False)
-
+    
+    y_score = model.predict_proba(X_test)
+    fig_obj = plt.figure()
+    y_score_rav = y_score[:,1]
+    ras = sk.metrics.roc_auc_score(y_test, y_score_rav)
+    fpr, tpr, thrsh = sk.metrics.roc_curve(y_test, y_score_rav)
+    plt.plot(fpr,tpr,label=str(ndim) + "-Dim")
+    plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions ROC Curve")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    text_box = AnchoredText("ROC AUC Score: " + str(ras), frameon=True, loc=4, pad=0.5)
+    plt.setp(text_box.patch, facecolor='white', alpha=0.5)
+    plt.gca().add_artist(text_box)
+    plt.savefig(output_path + alg + "_" + str(ndim) + "-dims_" + "ras.png")
+    plt.close()
+    
+    output_file.write("\nROC AUC Score: " + str(ras))
+    output_file2.write(str(ras)+ ", ")
+    output_file3.write("fpr\n")
+    output_file3.write(str(fpr))
+    output_file3.write("tpr\n")
+    output_file3.write(str(tpr))
+    output_file3.write("thrsh\n")
+    output_file3.write(str(thrsh)) 
+    
     mcc = sk.metrics.matthews_corrcoef(y_test, y_pred)
     #print("Matthews Correlation Coefficient: ", mcc)
     output_file.write("\nMatthews Correlation Coefficient: " + str(mcc))
+    output_file2.write(str(mcc) + ", ")
 
     ck = sk.metrics.cohen_kappa_score(y_test, y_pred)
     #print("Cohen's kappa: ", ck)
     output_file.write("\nCohen's kappa: " + str(ck))
+    output_file2.write(str(ck) + ", ")
 
     jaccard = sk.metrics.jaccard_score(y_test, y_pred)
     #print("Jaccard Score: ", jaccard)
     output_file.write("\nJaccard Score: " + str(jaccard))
+    output_file2.write(str(jaccard) + ", ")
 
     hingel = sk.metrics.hinge_loss(y_test, y_pred)
     #print("Hinge Loss: ", hingel)
     output_file.write("\nHinge Loss: " + str(hingel))
+    output_file2.write(str(hingel) + ", ")
 
     hammingl = sk.metrics.hamming_loss(y_test, y_pred)
     #print("Hamming Loss: ", hammingl)
     output_file.write("\nHamming Loss: " + str(hammingl))
+    output_file2.write(str(hammingl) + ", ")
 
     z1l = sk.metrics.zero_one_loss(y_test, y_pred)
     #print("Zero-one Loss: ", z1l)
     output_file.write("\nZero-one Loss: " + str(z1l))
+    output_file2.write(str(z1l)+ "\n")
 
-    return output_file_path
+    return output_path, model,fpr, tpr, thrsh
 
 # This currently does nothing and I have only been using it for experiment with in-built visualizations
-def general_plotter(X, y, ndim, model):
-    #graphs, fig = TSNE_2D_plot(X, y, len(y), ndim, return_plot=True)
-    #fig_name = model_path + '/' + 'val_vector_' + str(ndim) + '-dims.png'
-    #fig_name = './Dummyfig.png'
-    #fig.savefig(fig_name)
-    #graphs.clf()
-    #print(graphs[:,0])
-    #print(graphs[:,1])
-    #x1, x2 = np.meshgrid(
-    #    np.linspace(0, len(graphs[:, 0])),
-    #    np.linspace(0, len(graphs[:, 1]))
-    #)
-    #bounds.plot()
-    #y_pred = np.reshape(y, x1.shape)
-    #print( len(x1))
-    #print(len(x2))
-    #ypred = np.reshape(y, len(x1))
-    #print(ypred.shape)
-    #bounds = sk.inspection.DecisionBoundaryDisplay(xx0=x1, xx1=x2, response = ypred)
-    #bounds.plot()
-    #prerec = sk.metrics.PredictionErrorDisplay.from_predictions(y, model.predict(X))
-    #prerec.plot()
-    #plt.plot(x1, x2)
-    #plt.scatter(graphs[:,0], graphs[:,1], y )
-
-    #plt.show()
-
+def group_plotter(X_test, y_test, ndim, model, output_path):
+    #print(output_path)
+    output_path = "./results/supervised_methods_evaluation_results/knn/optimized_results/"
+    
+    #for i in len(y_score_hold):
+    #    plt.plot()
+    
+    counter = 0
+    figure1 = plt.figure()
+    
+    for fig in os.listdir(output_path):
+        if fig.endswith(".pickle"):
+            fig_object = pickle.load(open(output_path+fig, 'rb'))
+            print(fig_object)
+            #plt.figure(fig_object)
+            #graph_data.append(pickle.load(open(output_path+fig, 'rb')))
+        #plt.figure()
+    #m_fig, axs = plt.subplots(counter,1)
+    #max_l = counter
+    #gs = figure1.add_gridspec(1, 3)
+    #counter = 0
+    #for i in graph_data:
+    #    figure1.add_subfigure(gs[0,counter])
+    #    counter = counter + 1
+    figure1.Figure.show()
+    
     return 0

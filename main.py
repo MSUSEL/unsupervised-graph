@@ -10,10 +10,6 @@ from supervised_learning_util import *
 import gc
 import os
 
-import warnings
-warnings.filterwarnings("ignore")
-
-
 def create_CFG_datastet(prog_path, cfg_path, n_malware, n_benign):
     ''' Create the CFG dataset from set of binary files
 
@@ -401,6 +397,10 @@ def get_clf_hyper_para(cluster_alg):
 
 
 def supervised_learning(output_path, superv_alg_name, ndims_list, clf_type='plain'):
+    fpr_hold = np.array([])
+    tpr_hold = np.array([])
+    thrsh_hold = np.array([])
+    counter = 0
     for ndim in ndims_list:
         print('Dimensions = ', ndim)
 
@@ -424,22 +424,34 @@ def supervised_learning(output_path, superv_alg_name, ndims_list, clf_type='plai
 
         X_train_size = len(X_train)
         y_train_size = len(y_train)
-
         if clf_type == 'optimized':
             for alg in superv_alg_name:
-                model, optimizing_record, training_time = supervised_learning_caller_optimized(alg, X_train, y_train_bin, X_test, y_test_bin)
-                supervised_methods_evaluation(alg, model, X_test, y_test_bin,
+                print("Current Alg: ", alg)
+                model, optimizing_record, training_time = supervised_learning_caller_optimized(alg, X_train, y_train_bin, 
+                                                                                               X_test, y_test_bin)
+                output_path1, model, fpr, tpr, thrsh = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
                                               ndim, X_train_size, y_train_size,
                                               output_path, training_time,
                                               optimized=True, optimizing_tuple=optimizing_record)
-                # general_plotter(X_test, y_test_bin, ndim, model)
+                '''
+                if counter == 0:
+                    fpr_hold = np.append(fpr_hold, fpr) 
+                    tpr_hold= np.append(tpr_hold, tpr)
+                    thrsh_hold = np.append(thrsh_hold, thrsh)
+                else:
+                    fpr_hold = np.vstack([fpr_hold, fpr]) 
+                    tpr_hold= np.vstack([tpr_hold, tpr])
+                    thrsh_hold = np.vstack([thrsh_hold, thrsh])
+                counter = counter + 1 
+                print(fpr_hold)
+                '''
         elif clf_type == 'plain':
             for alg in superv_alg_name:
                 model, training_time = plain_clf_runner(alg, X_train, y_train_bin)
-                supervised_methods_evaluation(alg, model, X_test, y_test_bin,
+                supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
                                               ndim, X_train_size, y_train_size,
                                               output_path, training_time)
-                # general_plotter(X_test, y_test_bin, ndim, model)
+    #group_plotter(X_test, y_test_bin, ndims_list, model, output_path)
     return 0
 
 
@@ -477,11 +489,9 @@ if __name__ == "__main__":
     print('******************* STEP: 2 *******************')
 
     # Graph2Vec dimensions
-    ndims_list = [2, 4, 8, 16, 32, 64, 128, 256]
-
-    #ndims_list = [2, 4, 8, 16, 32, 64]
+    #ndims_list = [2, 4, 8, 16, 32, 64, 128, 256]
     
-    ndims_list = [2,4,8,16,32]
+    ndims_list = [32, 128]
     
     # The hyper parameters for embedding is inside the function
 
@@ -502,13 +512,11 @@ if __name__ == "__main__":
     #all implemented classifiers, mnb, compnb, catnb, and mlp are not functional
     superv_alg_name = [ 'knn', 'rnn', 'lsvc', 'nsvc', 'svc', 'gp', 'dt', 'rf', 'ada', 'gnb', 'mnb', 
                         'compnb', 'catnb' ,'qda', 'lda', 'mlp']
-    
-    superv_alg_name = [ 'knn', 'rnn',  'gp',  'ada', 'gnb', 'qda', 'lda', 'lsvc', 'nsvc', 'svc', 'dt', 'rf' ]
-    
-    superv_alg_name = ['knn', 'lda', 'gp', 'rf', 'svc', 'gnb']
     '''
+    #superv_alg_name = [  'gp',  'ada', 'gnb', 'lda', 'svc', 'dt', 'rf' ]
     
-    superv_alg_name = ['knn']
+    
+    superv_alg_name = [ 'gp' ] #, 'knn', 'svc' ]
 
     clf_type1 = 'plain'
     clf_type2 = 'optimized'
@@ -523,4 +531,7 @@ if __name__ == "__main__":
     print('******************* STEP: 4 *******************')
     #cluster_prediction(test_cfg_path, output_path, param, cluster_alg_name, ndims_list)
 
+    
+    
+    
     print('******************* Process Finished *******************')
