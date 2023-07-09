@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.spatial.distance
 import sklearn as sk
-from matplotlib import pyplot as plt
 from sklearn import gaussian_process
 from sklearn.gaussian_process.kernels import *
 from sklearn import tree
@@ -9,20 +8,12 @@ from sklearn import ensemble
 from sklearn import neural_network
 from sklearn import naive_bayes
 from sklearn import discriminant_analysis
-from sklearn import metrics
-from sklearn import inspection
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import roc_curve, auc
 from scipy import spatial
-import os
-from g2v_util import TSNE_2D_plot
 import time
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib.pyplot as plt
-from matplotlib.offsetbox import AnchoredText
-import pickle
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -707,8 +698,144 @@ def gp_par_helper(kernel_passed):
         
     return model1, pred_best, best_rec
 
+def generate_random_forest(X, y, X_train, y_train, pre_optimized = False):
+    x_dim, y_dim = X.shape
+    if pre_optimized:
+        model1, best_rec = rf_pre_opt_helper(y_dim)
+        return model1, best_rec
+    
+    criterion = ['gini', 'entropy', 'log_loss']
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    for n in criterion:
+        fin_fut_objs.append(exe.submit(rf_par_helper, n))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    fin_fut_objs = np.array(fin_fut_objs)
+    #clf_acc_high = max(fin_fut_objs[:,1])
+    clf_acc_high_idx = np.argmax(fin_fut_objs[:,1])
+    model1 = fin_fut_objs[clf_acc_high_idx][0]
+    best_rec = fin_fut_objs[clf_acc_high_idx][2]
+    
+    return model1, best_rec
 
-def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test):
+def rf_pre_opt_helper(y_dim):
+    if y_dim == 512:
+        model = sk.ensemble.RandomForestClassifier(n_estimators=100,
+                                                   criterion='log_loss',
+                                                   max_features='sqrt',
+                                                   n_jobs=-1)
+        best_rec = ('log_loss', 100, 'sqrt')
+    elif y_dim == 1024:
+        model = sk.ensemble.RandomForestClassifier(n_estimators=150,
+                                                   criterion='entropy',
+                                                   max_features=None,
+                                                   n_jobs=-1)
+        best_rec = ('entropy', 150, None)
+    elif y_dim == 2048:
+        model = sk.ensemble.RandomForestClassifier(n_estimators=100,
+                                                   criterion='entropy',
+                                                   max_features='sqrt',
+                                                   n_jobs=-1)
+        best_rec = ('entropy', 100, 'sqrt')
+    elif y_dim == 4096:
+        model = sk.ensemble.RandomForestClassifier(n_estimators=150,
+                                                   criterion='gini',
+                                                   max_features='sqrt',
+                                                   n_jobs=-1)
+        best_rec = ('gini', 150, 'sqrt')        
+        
+    return model, best_rec
+    
+def rf_par_helper(criterion):
+    n_est = [50,100,150]
+    max_feature = ['sqrt', 'log2', None]
+    pred_best = 0
+    for i in n_est:
+        for j in max_feature:
+            model = sk.ensemble.RandomForestClassifier(n_estimators=i,
+                                                       criterion=criterion,
+                                                       max_features=j,
+                                                       n_jobs=-1)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, criterion, i, j)
+                model1 = model
+                pred_best = curr_score 
+            print(criterion, curr_score, i, j)
+    return model1, pred_best, best_rec
+
+def generate_linear_svc(X, y, X_train, y_train, pre_optimized = False):
+    x_dim, y_dim = X.shape
+    '''
+    if pre_optimized:
+        model1, best_rec = rf_pre_opt_helper(y_dim)
+        return model1, best_rec
+    '''
+    loss = ['hinge', 'squared_hinge']
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    counter = 1
+    for n in loss:
+        print("Num of par jobs in inner parallelization: ", counter)
+        counter = counter + 1
+        fin_fut_objs.append(exe.submit(lsvc_par_helper, n))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    fin_fut_objs = np.array(fin_fut_objs)
+    clf_acc_high_idx = np.argmax(fin_fut_objs[:,1])
+    model1 = fin_fut_objs[clf_acc_high_idx][0]
+    best_rec = fin_fut_objs[clf_acc_high_idx][2]
+ 
+    return model1, best_rec 
+
+def lsvc_par_helper(loss):
+    pred_best = 0
+    #penalty = ['l1', 'l2']
+    penalty = ['l2']
+    tol = [ 1*10**-2, 1*10**-3, 1*10**-4, 1*10**-5 ]
+    C = [.5, .7, 1, 1.3, 1.5]
+    if loss == 'hinge':
+        for i in tol:
+            for j in C:
+                model = sk.svm.LinearSVC(penalty='l2',
+                                         loss=loss,
+                                         dual=True,
+                                         tol=i,
+                                         C=j,
+                                         random_state=42)
+            model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+            curr_score = model_scores.mean()
+            if curr_score > pred_best:
+                best_rec = (curr_score, loss, i, j)
+                model1 = model
+                pred_best = curr_score 
+            print(curr_score, loss, 'l2', i, j)
+                
+    elif loss == 'squared_hinge':
+        for k in penalty:
+            for i in tol:
+                for j in C:
+                    model = sk.svm.LinearSVC(penalty=k,
+                                             loss=loss,
+                                             dual=True,
+                                             tol=i,
+                                             C=j,
+                                             random_state=42)
+                    model_scores = cross_val_score(model, X_tr, y_tr, cv = 5, n_jobs = -1 )
+                    curr_score = model_scores.mean()
+                    if curr_score > pred_best:
+                        best_rec = (curr_score, loss, i, j)
+                        model1 = model
+                        pred_best = curr_score 
+                    print(curr_score, loss, k, i, j)
+                
+    return model1, pred_best, best_rec
+
+def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test, pre_optimized):
     global X_tr, y_tr, X_te, y_te
     X_tr = X_train
     y_tr = y_train
@@ -716,7 +843,7 @@ def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test):
     y_te = y_test
     if alg == 'knn':
         start_time = time.monotonic()
-        model, best_rec = generate_k_nearest_neighbours(X_train, y_train, X_test, y_test, pre_optimized=True)
+        model, best_rec = generate_k_nearest_neighbours(X_train, y_train, X_test, y_test, pre_optimized)
         training_time = timedelta(seconds=time.monotonic()-start_time)
     elif alg == 'svc':
         start_time = time.monotonic()
@@ -724,7 +851,15 @@ def supervised_learning_caller_optimized(alg, X_train, y_train, X_test, y_test):
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'gp':
         start_time = time.monotonic()
-        model, best_rec = generate_gaussian_process(X_train, y_train, X_test, y_test, pre_optimized=True)
+        model, best_rec = generate_gaussian_process(X_train, y_train, X_test, y_test, pre_optimized)
+        training_time = timedelta(seconds=time.monotonic() - start_time)
+    elif alg == 'rf':
+        start_time = time.monotonic()
+        model, best_rec = generate_random_forest(X_train, y_train, X_test, y_test, pre_optimized)
+        training_time = timedelta(seconds=time.monotonic() - start_time)
+    elif alg == 'lsvc':
+        start_time = time.monotonic()
+        model, best_rec = generate_linear_svc(X_train, y_train, X_test, y_test, pre_optimized)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     return model, best_rec, training_time
 
@@ -744,7 +879,7 @@ def plain_clf_runner(alg, X, y):
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'nsvc':
         start_time = time.monotonic()
-        model = sk.svm.NuSVC()
+        model = sk.svm.NuSVC(probability=True)
         training_time = timedelta(seconds=time.monotonic() - start_time)
     elif alg == 'svc':
         start_time = time.monotonic()
@@ -794,216 +929,21 @@ def plain_clf_runner(alg, X, y):
         start_time = time.monotonic()
         model = sk.neural_network.MLPClassifier()
         training_time = timedelta(seconds=time.monotonic() - start_time)
-
-    return model, training_time
-
-
-def classifier_name_expand(alg):
-    #superv_alg_name = [ 'knn', 'rnn', 'lsvc', 'nsvc', 'svc', 'gp', 'dt', 'rf', 'ada', 'gnb', 'mnb',
-    #                    'compnb', 'catnb', 'qda', 'lda']
-    if alg ==  'knn':
-        alg = 'K-Nearest Neighbors'
-    elif alg == 'rnn':
-        alg = 'Radius Neighbors'
-    elif alg == 'lsvc':
-        alg = 'Linear SVC'
-    elif alg == 'nsvc':
-        alg = 'Nu-SVC'
-    elif alg == 'svc':
-        alg = 'SVC'
-    elif alg == 'gp':
-        alg = 'Gaussian Processes'
-    elif alg == 'dt':
-        alg = 'Decision Tree'
-    elif alg == 'rf':
-        alg = 'Random Forest'
-    elif alg == 'ada':
-        alg = 'AdaBoost'
-    elif alg == 'gnb':
-        alg = 'Gaussian Naive Bayes'
-    elif alg == 'mnb':
-        alg = 'Multinomial Naive Bayes'
-    elif alg == 'compnb':
-        alg = 'Complement Naive Bayes'
-    elif alg == 'catnb':
-        alg = 'Categorical Naive Bayes'
-    elif alg == 'qda':
-        alg = 'Quadratic Discriminant Analysis'
-    elif alg == 'lda':
-        alg = 'Linear Discriminant Analysis'
-    elif alg == 'mlp':
-        alg = 'Multilayer Perceptron'
-    return alg
-
-def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
-                                  X_train_size, y_train_size, output_path, training_time,optimized=False, optimizing_tuple=None):
-    
-    start_time = time.monotonic()
-    acc_scores = cross_val_score(model, X, y, cv = 5, n_jobs = -1 )
-    training_time = timedelta(seconds=time.monotonic() - start_time)
-    
-    start_time = time.monotonic()
-    y_pred = model.fit(X,y).predict(X_test)
-    prediction_time = timedelta(seconds=time.monotonic() - start_time)
-    
-    #output_file_path = output_path + "supervised_methods_evaluation_results/" + alg + "/"
-    output_path = output_path + "supervised_methods_evaluation_results/" + alg + "/"
-    #for dummy testing
-    #output_file_path = output_path + "supervised_methods_evaluation_results/dummy_"
-
-    if optimized:
-        output_path = output_path + "/optimized_results/"  
-        summary_file_path = output_path + alg + "_summary_optimized.csv"
-        output_file_path = output_path + alg + "_" + str(ndim) + "-dims_optimized_" + "results.txt"
-        roc_data_path = output_path + alg + "_" + str(ndim) + "-dims_optimized_" + "roc_data.csv"
-        #output_file_path = output_file_path + "dummy_" + alg + "_" + str(ndim) + "-dims_optimized_" + "results.txt"
-        #print(output_file_path)
-    else:
-        output_path = output_path + "/plain_results/"
-        summary_file_path = output_path + alg + "_summary_plain.csv"
-        output_file_path = output_path + alg + "_" + str(ndim) + "-dims_" + "results.txt"
-        roc_data_path = output_path + alg + "_" + str(ndim) + "-dims_" + "roc_data.csv"
+    elif alg == 'ridge':
+        start_time = time.monotonic()
+        model = sk.linear_model.RidgeClassifier()
+        training_time = timedelta(seconds=time.monotonic() - start_time)
+    elif alg ==  'pa':
+        start_time = time.monotonic()
+        model = sk.linear_model.PassiveAggressiveClassifier()
+        training_time = timedelta(seconds=time.monotonic() - start_time)
+    elif alg ==  'sgd':
+        start_time = time.monotonic()
+        model = sk.linear_model.SGDClassifier()
+        training_time = timedelta(seconds=time.monotonic() - start_time)
+    elif alg ==  'perc':
+        start_time = time.monotonic()
+        model = sk.linear_model.Perceptron()
+        training_time = timedelta(seconds=time.monotonic() - start_time)
         
-        #output_file_path = outpu-t_file_path + "dummy_" + alg + "_" + str(ndim) + "-dims_" + "results.txt"
-        #print("\n" + output_file_path)
-
-    os.makedirs(os.path.dirname(summary_file_path), exist_ok=True)
-
-    output_file = open(output_file_path, "w")
-    output_file2 = open(summary_file_path, "a")
-    output_file3 = open(roc_data_path, "a")
-    
-    output_file.write("Classifier Name: " + classifier_name_expand(alg))
-    output_file2.write(classifier_name_expand(alg) + ", ")
-
-    if optimized:
-        output_file.write("\nOptimizing Tuple: " + str(optimizing_tuple))
-        output_file2.write(str(optimizing_tuple) + ", ")
-
-    output_file.write("\nVector Input Dimensions: " + str(ndim))
-    output_file2.write(str(ndim) + ", ")
-
-    output_file.write("\nTraining Time: " + str(training_time) + ", ")
-
-    output_file.write("\nPrediction Time: " + str(prediction_time) + ", ")
-    
-    
-    output_file.write("\nAccuracy Scores During Training: " + str(acc_scores))
-    output_file.write("\nAccuracy Scores Mean During Training: " + str(acc_scores.mean()))
-    output_file.write("\nAccuracy Scores Standard Deviation During Training: " + str(acc_scores.std()))
-    
-    output_file2.write(str(acc_scores) + ", " + str(acc_scores.mean()) + str(acc_scores.std()) )
-    
-    accScore = sk.metrics.accuracy_score(y_test, y_pred)
-    output_file.write("\nAccuracy Score on Test Set: " + str(accScore))
-    
-    output_file2.write(str(acc_scores.mean()) + ", ")
-    output_file2.write(str(acc_scores.std()) + ", ")
-    output_file2.write(str(acc_scores) + ", ")
-    #print("Accuracy Score: ", accScore)
-
-    preScore = sk.metrics.precision_score(y_test, y_pred)
-    output_file.write("\nPrecision Score: " + str(preScore))
-    output_file2.write(str(preScore) + ", ")
-    
-    recScore = sk.metrics.recall_score(y_test, y_pred)
-    output_file.write("\nRecall Score: " + str(recScore))
-    output_file2.write(str(recScore) + ", ")                  
-                      
-    f1Score = sk.metrics.recall_score(y_test, y_pred)
-    output_file.write("\nF1 Score: " + str(f1Score))
-    output_file2.write(str(f1Score) + ", ")                       
-
-    cm = sk.metrics.confusion_matrix(y_test, y_pred)
-    output_file.write("\nConfusion Matrix: \n" + str(cm))
-    cmdisp = sk.metrics.ConfusionMatrixDisplay(cm, display_labels=['Benign', 'Malignant'])
-    cmdisp.plot()
-    plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions Confusion Matrix")
-    plt.savefig(output_path + alg + "_" + str(ndim) + "-dims_" + "cm.png")
-    plt.close()
-    #plt.show(block=False)
-    
-    y_score = model.predict_proba(X_test)
-    fig_obj = plt.figure()
-    y_score_rav = y_score[:,1]
-    ras = sk.metrics.roc_auc_score(y_test, y_score_rav)
-    fpr, tpr, thrsh = sk.metrics.roc_curve(y_test, y_score_rav)
-    plt.plot(fpr,tpr,label=str(ndim) + "-Dim")
-    plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions ROC Curve")
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    text_box = AnchoredText("ROC AUC Score: " + str(ras), frameon=True, loc=4, pad=0.5)
-    plt.setp(text_box.patch, facecolor='white', alpha=0.5)
-    plt.gca().add_artist(text_box)
-    plt.savefig(output_path + alg + "_" + str(ndim) + "-dims_" + "ras.png")
-    plt.close()
-    
-    output_file.write("\nROC AUC Score: " + str(ras))
-    output_file2.write(str(ras)+ ", ")
-    output_file3.write("fpr\n")
-    output_file3.write(str(fpr))
-    output_file3.write("tpr\n")
-    output_file3.write(str(tpr))
-    output_file3.write("thrsh\n")
-    output_file3.write(str(thrsh)) 
-    
-    mcc = sk.metrics.matthews_corrcoef(y_test, y_pred)
-    #print("Matthews Correlation Coefficient: ", mcc)
-    output_file.write("\nMatthews Correlation Coefficient: " + str(mcc))
-    output_file2.write(str(mcc) + ", ")
-
-    ck = sk.metrics.cohen_kappa_score(y_test, y_pred)
-    #print("Cohen's kappa: ", ck)
-    output_file.write("\nCohen's kappa: " + str(ck))
-    output_file2.write(str(ck) + ", ")
-
-    jaccard = sk.metrics.jaccard_score(y_test, y_pred)
-    #print("Jaccard Score: ", jaccard)
-    output_file.write("\nJaccard Score: " + str(jaccard))
-    output_file2.write(str(jaccard) + ", ")
-
-    hingel = sk.metrics.hinge_loss(y_test, y_pred)
-    #print("Hinge Loss: ", hingel)
-    output_file.write("\nHinge Loss: " + str(hingel))
-    output_file2.write(str(hingel) + ", ")
-
-    hammingl = sk.metrics.hamming_loss(y_test, y_pred)
-    #print("Hamming Loss: ", hammingl)
-    output_file.write("\nHamming Loss: " + str(hammingl))
-    output_file2.write(str(hammingl) + ", ")
-
-    z1l = sk.metrics.zero_one_loss(y_test, y_pred)
-    #print("Zero-one Loss: ", z1l)
-    output_file.write("\nZero-one Loss: " + str(z1l))
-    output_file2.write(str(z1l)+ "\n")
-
-    return output_path, model,fpr, tpr, thrsh
-
-# This currently does nothing and I have only been using it for experiment with in-built visualizations
-def group_plotter(X_test, y_test, ndim, model, output_path):
-    #print(output_path)
-    output_path = "./results/supervised_methods_evaluation_results/knn/optimized_results/"
-    
-    #for i in len(y_score_hold):
-    #    plt.plot()
-    
-    counter = 0
-    figure1 = plt.figure()
-    
-    for fig in os.listdir(output_path):
-        if fig.endswith(".pickle"):
-            fig_object = pickle.load(open(output_path+fig, 'rb'))
-            print(fig_object)
-            #plt.figure(fig_object)
-            #graph_data.append(pickle.load(open(output_path+fig, 'rb')))
-        #plt.figure()
-    #m_fig, axs = plt.subplots(counter,1)
-    #max_l = counter
-    #gs = figure1.add_gridspec(1, 3)
-    #counter = 0
-    #for i in graph_data:
-    #    figure1.add_subfigure(gs[0,counter])
-    #    counter = counter + 1
-    figure1.Figure.show()
-    
-    return 0
+    return model, training_time

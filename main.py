@@ -3,10 +3,15 @@ import time
 import networkx
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler as min_max_scaler
 
 from g2v_util import *
 from cluster_util import *
 from supervised_learning_util import *
+from supervised_learning_eval import *
+from create_embedding_comp import *
+
+from concurrent.futures import ThreadPoolExecutor
 import gc
 import os
 
@@ -29,16 +34,15 @@ def graph_embedding_training(cfg_path, output_path, ndims_list=[8]):
     benign_cfg_path = cfg_path + 'Benign_CFG/'
 
     n_precent_train = 0.2  # percentage for vocabulary  training (20% validation)
-
+    
     # Load .gpickle CFG files
     Malware_graphs, Malware_names = loadCFG(malware_cfg_path, n_malware)
     Benign_graphs, Benign_names = loadCFG(benign_cfg_path, n_benign)
 
     ## Train divide for vocabulary training graphs
     vocab_train_graphs, train_graphs, vocab_train_labels, train_labels, n_vocab_train, n_train, vocab_train_names, train_names = \
-        train_test_divide(Malware_graphs, Benign_graphs, Malware_names, Benign_names, n_malware, n_benign,
-                          n_precent_train)
-
+        train_test_divide(Malware_graphs, Benign_graphs, Malware_names, Benign_names, n_malware, n_benign, n_precent_train)
+    
     # Save memory by removing unnecessary  variables
     if 'Malware_graphs' in os.environ:
         del(Malware_graphs)
@@ -394,34 +398,40 @@ def get_clf_hyper_para(cluster_alg):
         min_samples = 2
         hyper_para_list = np.arange(5,150 , step = 5)
     return hyper_para_name, hyper_para_list
+'''
 
-
-def supervised_learning(output_path, superv_alg_name, ndims_list, clf_type='plain'):
-    fpr_hold = np.array([])
-    tpr_hold = np.array([])
-    thrsh_hold = np.array([])
-    counter = 0
+def supervised_learning(output_path, superv_alg_name, ndims_list, emb, clf_type='plain'):
     for ndim in ndims_list:
         print('Dimensions = ', ndim)
 
     # load data
-        model_path = output_path + 'd2v_models/'
-        vector_path = model_path + '/' + 'train_file_vectors_' + str(ndim) + '.csv'
-        label_path = model_path + '/' + 'train_file_labels_' + str(ndim) + '.csv'
+        #model_path = output_path + 'd2v_models/'
+        model_path = output_path + emb + '_models/'
+        train_vector_path = model_path + 'train/train_file_vectors_' + str(ndim) + '.csv'
+        train_label_path = model_path + 'train/train_file_labels_' + str(ndim) + '.csv'
 
-        train_vector = pd.read_csv(vector_path, header=None).values
+        test_vector_path = model_path + 'test/test_file_vectors_' + str(ndim) + '.csv'
+        test_label_path = model_path + 'test/test_file_labels_' + str(ndim) + '.csv'
+        
+        train_vector = pd.read_csv(train_vector_path, header=None).values
+        X_train = StandardScaler().fit_transform(train_vector)
+        
+        test_vector = pd.read_csv(test_vector_path, header=None).values
+        X_test = StandardScaler().fit_transform(test_vector)
+        
+        train_df = pd.read_csv(train_label_path)
+        y_train = train_df['Label'].tolist() 
 
-        vector = StandardScaler().fit_transform(train_vector)
-
-        train_df = pd.read_csv(label_path)
-        train_vector_labels = train_df['Label'].tolist()
-        X_train, X_test, y_train, y_test = train_test_split(
-            vector, train_vector_labels, test_size=0.3, random_state=0)
-
+        train_df = pd.read_csv(test_label_path)
+        y_test = train_df['Label'].tolist() 
+        
         # Convert 'Benign/Malware' labels to binary (Benign->0 and Malware->1)
         y_train_bin = [1 if idx == 'Malware' else 0 for idx in y_train]
         y_test_bin = [1 if idx == 'Malware' else 0 for idx in y_test]
-
+        
+        #print(len(X_train), len(X_test))
+        #print(len(y_train_bin), len(y_test_bin))
+        
         X_train_size = len(X_train)
         y_train_size = len(y_train)
         if clf_type == 'optimized':
@@ -429,34 +439,95 @@ def supervised_learning(output_path, superv_alg_name, ndims_list, clf_type='plai
                 print("Current Alg: ", alg)
                 model, optimizing_record, training_time = supervised_learning_caller_optimized(alg, X_train, y_train_bin, 
                                                                                                X_test, y_test_bin)
-                output_path1, model, fpr, tpr, thrsh = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
+                output_path1, model = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
                                               ndim, X_train_size, y_train_size,
-                                              output_path, training_time,
+                                              output_path, emb, training_time,
                                               optimized=True, optimizing_tuple=optimizing_record)
-                '''
-                if counter == 0:
-                    fpr_hold = np.append(fpr_hold, fpr) 
-                    tpr_hold= np.append(tpr_hold, tpr)
-                    thrsh_hold = np.append(thrsh_hold, thrsh)
-                else:
-                    fpr_hold = np.vstack([fpr_hold, fpr]) 
-                    tpr_hold= np.vstack([tpr_hold, tpr])
-                    thrsh_hold = np.vstack([thrsh_hold, thrsh])
-                counter = counter + 1 
-                print(fpr_hold)
-                '''
+                #group_plotter(superv_alg_name, emb, ndims_list, output_path, optimized=True)
         elif clf_type == 'plain':
             for alg in superv_alg_name:
                 model, training_time = plain_clf_runner(alg, X_train, y_train_bin)
-                supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
+                output_path1, model = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
                                               ndim, X_train_size, y_train_size,
-                                              output_path, training_time)
-    #group_plotter(X_test, y_test_bin, ndims_list, model, output_path)
+                                              output_path, emb, training_time)
+                #group_plotter(superv_alg_name, emb, ndims_list, output_path, optimized=False)
+    return 0
+'''
+
+def supervised_learning(output_path, superv_alg_name, ndims_list, emb, clf_type='plain'):    
+    fin_fut_objs = []
+    exe = ThreadPoolExecutor(8)
+    for ndim in ndims_list:
+        fin_fut_objs.append(exe.submit(supervised_learning_par_caller, ndim, output_path, superv_alg_name, emb, clf_type))
+    
+    for obj in range(len(fin_fut_objs)):
+        fin_fut_objs[obj] = fin_fut_objs[obj].result()
+    print("Learning step completed")
+    
     return 0
 
+def supervised_learning_par_caller(ndim, output_path, superv_alg_name, emb, clf_type='plain'):
+    print('Dimensions = ', ndim)
+
+    model_path = output_path + emb + '_models/'
+    
+    train_vector_path = model_path + 'train/train_file_vectors_' + str(ndim) + '.csv'
+    train_label_path = model_path + 'train/train_file_labels_' + str(ndim) + '.csv'
+
+    test_vector_path = model_path + 'test/test_file_vectors_' + str(ndim) + '.csv'
+    test_label_path = model_path + 'test/test_file_labels_' + str(ndim) + '.csv'
+    
+    train_df = pd.read_csv(train_label_path)
+    y_train = train_df['Label'].tolist() 
+    
+    train_df = pd.read_csv(test_label_path)
+    y_test = train_df['Label'].tolist() 
+       
+    # Convert 'Benign/Malware' labels to binary (Benign->0 and Malware->1)
+    y_train_bin = [1 if idx == 'Malware' else 0 for idx in y_train]
+    y_test_bin = [1 if idx == 'Malware' else 0 for idx in y_test]
+    
+    min_max_scaler = sk.preprocessing.MinMaxScaler()
+    #test_scaled = min_max_scaler.fit_transform(ext)
+    
+    train_vector = pd.read_csv(train_vector_path, header=None).values
+    #X_train = StandardScaler().fit_transform(train_vector, y_train_bin)
+    X_train = train_vector
+    #X_train = min_max_scaler.fit_transform(train_vector)
+    #print(np.min(X_train), np.max(X_train))
+    #print(np.min(y_train_bin), np.max(y_train_bin))
+    
+    test_vector = pd.read_csv(test_vector_path, header=None).values
+    #X_test = StandardScaler().fit_transform(test_vector, y_test_bin)
+    X_test = test_vector
+    #X_test = min_max_scaler.fit_transform(test_vector)
+        
+    #print(len(X_train), len(X_test))
+    #print(len(y_train_bin), len(y_test_bin))
+        
+    X_train_size = len(X_train)
+    y_train_size = len(y_train)
+    if clf_type == 'optimized':
+        for alg in superv_alg_name:
+            print("Current Alg: ", alg, " Current Dim: ", ndim)
+            model, optimizing_record, training_time = supervised_learning_caller_optimized(alg, X_train, y_train_bin, 
+                                                                                               X_test, y_test_bin, True )
+
+            output_path1, model = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
+                                              ndim, X_train_size, y_train_size,
+                                              output_path, emb, training_time,
+                                              optimized=True, optimizing_tuple=optimizing_record)
+    elif clf_type == 'plain':
+        for alg in superv_alg_name:
+            print("Current Alg: ", alg, " Current Dim: ", ndim)
+            model, training_time = plain_clf_runner(alg, X_train, y_train_bin)
+            output_path1, model = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
+                                                                    ndim, X_train_size, y_train_size,
+                                                                    output_path, emb, training_time)
+    return 0
 
 if __name__ == "__main__":
-    print('Binary file analysis using Graph2Vec and unsupervised clustering')
+    print('Binary file analysis')
 
     # define paths for the binary files, CFG files, and Output files
     prog_path = './Binary_data/'
@@ -489,15 +560,26 @@ if __name__ == "__main__":
     print('******************* STEP: 2 *******************')
 
     # Graph2Vec dimensions
-    #ndims_list = [2, 4, 8, 16, 32, 64, 128, 256]
+    ndims_list = [2, 4, 8, 16, 32, 64, 128, 256]
     
-    ndims_list = [32, 128]
+    #ndims_list = [ 512, 1024]
+    
+    #ndims_list = [ 2048 ]
+    
+    #ndims_list = [ 512, 1024, 2048, 4096 ]
+    
+    #ndims_list = [2, 4, 8]
+    
+    #ndims_list = [ 2, 4, 8, 16, 32, 64 ]
     
     # The hyper parameters for embedding is inside the function
-
-    #param, model_path = graph_embedding_training(train_cfg_path, output_path, ndims_list)
     
-    #print(param, model_path)
+    #embed_list = [ 'wlksvd' ] #,  'gl2v', 'd2v']
+    
+    embed_list = [ 'd2v' ] #, 'wlksvd' ]
+    
+    #model_path = create_embedding(embed_list, cfg_path, output_path, ndims_list, n_malware, n_benign, n_test_malware, n_test_benign, isTrain = True)
+    
     ####### 3. Unsupervised clustering algorithm training with hold-out validation. ##################
     print('******************* STEP: 3 *******************')
     # Unsupervised clustering algorithms
@@ -508,24 +590,53 @@ if __name__ == "__main__":
     #clustering_training(output_path, cluster_alg_name, ndims_list)
 
     #Supervised Classification methods
-    '''
+    
     #all implemented classifiers, mnb, compnb, catnb, and mlp are not functional
-    superv_alg_name = [ 'knn', 'rnn', 'lsvc', 'nsvc', 'svc', 'gp', 'dt', 'rf', 'ada', 'gnb', 'mnb', 
-                        'compnb', 'catnb' ,'qda', 'lda', 'mlp']
-    '''
-    #superv_alg_name = [  'gp',  'ada', 'gnb', 'lda', 'svc', 'dt', 'rf' ]
+    #superv_alg_name = [ 'knn', 'rnn', 'lsvc', 'nsvc', 'svc', 'gp', 'dt', 'rf', 'ada', 'gnb', 'mnb', 
+    #                    'compnb', 'catnb' ,'qda', 'lda', 'mlp']
     
     
-    superv_alg_name = [ 'gp' ] #, 'knn', 'svc' ]
-
+    
+    #superv_alg_name = [  'ada', 'dt' ]
+    
+    #superv_alg_name = [  'nsvc', 'rf']
+    
+    #superv_alg_name = [ 'gnb', 'mnb', 'compnb']
+    
+    superv_alg_name = [ 'gp' , 'knn', 'svc']
+    
+    #superv_alg_name = [ 'svc','lda' ] #, 'qda']
+    
+    #superv_alg_name = [ 'ada', 'dt', 'nsvc', 'svc', 'lda', 'qda' ]   
+    
+    #superv_alg_name = [ 'ridge', 'pa', 'sgd', 'perc', 'lsvc', 'rf' ]
+    
+    #superv_alg_name = ['lsvc']
+    
     clf_type1 = 'plain'
-    clf_type2 = 'optimized'
+    #clf_type2 = 'optimized'
 
-    #print("Plain classifier check")
-    #supervised_learning(output_path, superv_alg_name, ndims_list, clf_type1)
+    #embed_list = [ 'wlksvd' ]
     
-    print("Optimized classifier check")
-    supervised_learning(output_path, superv_alg_name, ndims_list, clf_type2)
+    for emb in embed_list:
+        
+        print("Running Classifiers on " + classifier_name_expand(emb) + " embedded vectors" )
+    
+        print("Plain classifier check")
+        supervised_learning(output_path, superv_alg_name, ndims_list, emb, clf_type1)
+    
+        #print("Optimized classifier check")
+        #supervised_learning(output_path, superv_alg_name, ndims_list, emb, clf_type2)
+        
+    print("Running Plotting Functions")
+    for emb in embed_list:
+
+        #group_plotter_by_dim(superv_alg_name, emb, ndims_list, output_path, 'optimized')
+        group_plotter_by_dim(superv_alg_name, emb, ndims_list, output_path, 'plain')
+        
+        #group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, 'optimized')
+        group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, 'plain')
+       
     
     ####### 4. Cluster prediction for Test dataset ##################
     print('******************* STEP: 4 *******************')
