@@ -53,6 +53,13 @@ def classifier_name_expand(alg):
         alg = 'SGD'
     elif alg == 'perc':
         alg = 'Perceptron'
+    elif alg == 'hgbc':
+        alg = 'Histogram Gradient Boosting Classifier'
+    elif alg == 'gbc':
+        alg = 'Gradient Boosting Classifier'
+    elif alg == 'etc':
+        alg = 'Extra Trees Classifier'
+        
     #embedding methods
     elif alg == 'g2v':
         alg = 'Graph2Vec'
@@ -70,11 +77,16 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     global sem 
     start_time = time.monotonic()
     acc_scores = cross_val_score(model, X, y, cv = 5, n_jobs = -1 )
-    training_time = timedelta(seconds=time.monotonic() - start_time)
+    cv_time = timedelta(seconds=time.monotonic() - start_time)
     
     start_time = time.monotonic()
-    y_pred = model.fit(X,y).predict(X_test)
+    model.fit(X,y)
+    fitting_time = timedelta(seconds=time.monotonic() - start_time)
+    
+    start_time = time.monotonic()
+    y_pred = model.predict(X_test)
     prediction_time = timedelta(seconds=time.monotonic() - start_time)
+    
     
     #output_file_path = output_path + "supervised_methods_evaluation_results/" + alg + "/"
     output_path = output_path + "supervised_methods_evaluation_results/" + emb + '/' + alg + "/"
@@ -109,7 +121,9 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     output_file.write("\nVector Input Dimensions: " + str(ndim))
     output_file2.write(str(ndim) + ", ")
 
-    output_file.write("\nTraining Time: " + str(training_time) + ", ")
+    output_file.write("\nCV Time: " + str(cv_time) + ", ")
+    
+    output_file.write("\nFitting Time: " + str(fitting_time) + ", ")
 
     output_file.write("\nPrediction Time: " + str(prediction_time) + ", ")
         
@@ -161,8 +175,6 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
         y_score_rav = y_score[:,1]
     else:
         y_score_rav = model.decision_function(X_test)
-    #fig_obj = plt.figure()
-
     ras = sk.metrics.roc_auc_score(y_test, y_score_rav)
     fpr, tpr, thrsh = sk.metrics.roc_curve(y_test, y_score_rav)
     plt.plot(fpr,tpr,label=str(ndim) + "-Dim")
@@ -293,3 +305,14 @@ def group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, clf_type
             plt.close()
             
     return 0
+
+def embedding_timing_writer(timing_path, fit_time, inf_time, isTrain):
+        os.makedirs(os.path.dirname(timing_path), exist_ok=True) 
+        timing_output_path = timing_path + embedding + '_timings.csv'
+        output_file = open(timing_output_path, "a")
+        output_file.write("Time to fit model: " + fit_time)
+        if isTrain:
+            output_file.write("\nTime to infer from training data: " + inf_tr_time)
+        else:
+            output_file.write("\nTime to infer from test data: " + inf_tst_time)
+    
