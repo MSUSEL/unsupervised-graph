@@ -139,7 +139,6 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     output_file2.write(str(acc_scores.mean()) + ", ")
     output_file2.write(str(acc_scores.std()) + ", ")
     output_file2.write(str(acc_scores) + ", ")
-    #print("Accuracy Score: ", accScore)
 
     preScore = sk.metrics.precision_score(y_test, y_pred)
     output_file.write("\nPrecision Score: " + str(preScore))
@@ -168,7 +167,6 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions Confusion Matrix")
     plt.savefig(output_path + emb + "_" + alg + "_" + str(ndim) + "-dims_" + "cm.png")
     plt.close()
-    #plt.show(block=False)
     
     if alg not in ['lsvc', 'ridge', 'pa', 'sgd', 'perc']:
         y_score = model.predict_proba(X_test)
@@ -187,15 +185,6 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     plt.savefig(output_path + emb + "_" + alg + "_" + str(ndim) + "-dims_" + "ras.png")
     plt.close()
     
-    #this only works with 2-d data
-    '''
-    dbd = sk.inspection.DecisionBoundaryDisplay.from_estimator(model, X_test, response_method='decision_function')
-    dbd.plot()
-    plt.title(classifier_name_expand(alg) + " " + str(ndim) + "-Dimensions Decision Boundary")
-    plt.savefig(output_path + emb + "_" + alg + "_" + str(ndim) + "-dims_" + "db.png")
-    plt.close()
-    '''
-    
     print("Dim leaving plot writing block: ", ndim)
     sem = True
         
@@ -206,32 +195,26 @@ def supervised_methods_evaluation(alg, model, X, y, X_test, y_test, ndim,
     data.to_csv(roc_data_path, index = False)
    
     mcc = sk.metrics.matthews_corrcoef(y_test, y_pred)
-    #print("Matthews Correlation Coefficient: ", mcc)
     output_file.write("\nMatthews Correlation Coefficient: " + str(mcc))
     output_file2.write(str(mcc) + ", ")
 
     ck = sk.metrics.cohen_kappa_score(y_test, y_pred)
-    #print("Cohen's kappa: ", ck)
     output_file.write("\nCohen's kappa: " + str(ck))
     output_file2.write(str(ck) + ", ")
 
     jaccard = sk.metrics.jaccard_score(y_test, y_pred)
-    #print("Jaccard Score: ", jaccard)
     output_file.write("\nJaccard Score: " + str(jaccard))
     output_file2.write(str(jaccard) + ", ")
 
     hingel = sk.metrics.hinge_loss(y_test, y_pred)
-    #print("Hinge Loss: ", hingel)
     output_file.write("\nHinge Loss: " + str(hingel))
     output_file2.write(str(hingel) + ", ")
 
     hammingl = sk.metrics.hamming_loss(y_test, y_pred)
-    #print("Hamming Loss: ", hammingl)
     output_file.write("\nHamming Loss: " + str(hammingl))
     output_file2.write(str(hammingl) + ", ")
 
     z1l = sk.metrics.zero_one_loss(y_test, y_pred)
-    #print("Zero-one Loss: ", z1l)
     output_file.write("\nZero-one Loss: " + str(z1l))
     output_file2.write(str(z1l)+ "\n")
 
@@ -306,13 +289,13 @@ def group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, clf_type
             
     return 0
 
-def embedding_timing_writer(timing_path, fit_time, inf_time, isTrain):
+def embedding_timing_writer(embedding, timing_path, fit_time, inf_time, isTrain):
         os.makedirs(os.path.dirname(timing_path), exist_ok=True) 
         timing_output_path = timing_path + embedding + '_timings.csv'
         output_file = open(timing_output_path, "a")
-        output_file.write("Time to fit model: " + fit_time)
+        output_file.write("Time to fit model: " + str(fit_time))
         if isTrain:
-            output_file.write("\nTime to infer from training data: " + inf_tr_time)
+            output_file.write("\nTime to infer from training data: " + str(inf_time))
         else:
-            output_file.write("\nTime to infer from test data: " + inf_tst_time)
+            output_file.write("\nTime to infer from test data: " + str(inf_time))
     

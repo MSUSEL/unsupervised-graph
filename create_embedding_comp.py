@@ -1,6 +1,7 @@
 from reader import *
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from karateclub.graph_embedding import Graph2Vec, GL2Vec, SF, IGE
 import timeit
@@ -15,22 +16,23 @@ import pandas as pd
 import numpy as np
 import os
 import gc
-from joblib import dump, load
+#from joblib import dump, load
 import pickle
 
 import psutil
 
-def create_embedding(embedding_list, cfg_path, output_path, ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain):
+def create_embedding(embedding_list, cfg_path, output_path, g2v_ndims_list, wlksvd_ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain):
     #FINISH CLEANING UP EMBEDDING ROUTINES
     for embedding in embedding_list:
-        if embedding == 'g2v':
-            timing_path = output_path + 'g2v_embedding_timing/'
-            model_output_path, fit_time, inf_time = graph2vec_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_train, isTrain)
+        if embedding == 'd2v':
+            timing_path = output_path + 'd2v_embedding_timing/'
+            model_output_path, fit_time, inf_time = graph2vec_emb(cfg_path, output_path, g2v_ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain)
+            embedding_timing_writer(embedding, timing_path, fit_time, inf_time, isTrain)
         elif embedding == 'wlksvd':
             timing_path = output_path + 'wlksvd_embedding_timing/'
-            model_output_path, fit_time, inf_time = wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain)
+            model_output_path, fit_time, inf_time = wlksvd_emb(cfg_path, output_path, wlksvd_ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain)
+            embedding_timing_writer(embedding, timing_path, fit_time, inf_time, isTrain)
             
-        embedding_timing_writer(timing_path, fit_time, inf_time, isTrain)
     return model_output_path
     
 def graph2vec_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_train, n_malware_test, n_benign_test, isTrain=True):
@@ -44,8 +46,13 @@ def graph2vec_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_t
         n_percent_train = 0.0
     
     # Load .gpickle CFG files for training set
-    Malware_graphs, Malware_names = loadCFG(malware_cfg_path, n_malware)
-    Benign_graphs, Benign_names = loadCFG(benign_cfg_path, n_benign)
+    
+    if isTrain:
+        Malware_graphs, Malware_names = loadCFG(malware_cfg_path, n_malware_train)
+        Benign_graphs, Benign_names = loadCFG(benign_cfg_path, n_benign_train)
+    else:
+        Malware_graphs, Malware_names = loadCFG(malware_cfg_path, n_malware_test)
+        Benign_graphs, Benign_names = loadCFG(benign_cfg_path, n_benign_test)
 
     ## Parameters
     param = WL_parameters()
@@ -216,7 +223,7 @@ def wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_trai
         print("Dimensions(train set): ", ndim)
         model_name = (model_path + '/' + 'wlksvd_model_' + str(ndim) + '.model')
         model = WL_KSVD(dimensions=ndim, n_vocab=1000,
-                                        n_non_zero_coefs=int(np.ceil(ndim / 10)))
+                                        n_non_zero_coefs=int(np.ceil(ndim / 10)))   
         print("Fitting model")
         
         start_time = time.monotonic()
@@ -225,8 +232,11 @@ def wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_trai
         
         model_out_path = Path(model_path + '/wlksvd_model_' + str(ndim) + '.model')
         model_out_path.parent.mkdir(parents=True, exist_ok=True)
-        X_vec = model.get_embedding()
-        pd.DataFrame(X_vec).to_csv(model_out_path, header=None, index=None)
+        #X_vec = model.get_embedding()
+        #pd.DataFrame(X_vec).to_csv(model_out_path, header=None, index=None)
+        
+        pickle.dump(model, open(model_out_path, 'wb'))
+        
         print("Inferring graphs")
         
         start_time = time.monotonic()
@@ -250,7 +260,7 @@ def wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_trai
         fig_name = model_path + '/train/train_vector_' + str(ndim) + '-dims.png'
         fig.savefig(fig_name)
         plt.clf()
-    
+        
     malware_cfg_path = cfg_path + 'Test_CFG/Malware_CFG/'
     benign_cfg_path = cfg_path + 'Test_CFG/Benign_CFG/'
     
@@ -265,11 +275,12 @@ def wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_trai
     inp2_graphs, inp2_labels, inp2_names = DocShuffle(inp2_graphs, inp2_labels, inp2_names)     
     for ndim in ndims_list:
         print("Dimensions(test set): ", ndim)
-        model = WL_KSVD(dimensions=ndim, n_vocab=1000,
-                                        n_non_zero_coefs=int(np.ceil(ndim / 10)))
-        print("Fitting model")
-        
+        #model = WL_KSVD(dimensions=ndim, n_vocab=1000,
+        #                                n_non_zero_coefs=int(np.ceil(ndim / 10)))
+        #print("Fitting model")
+        model = pickle.load(open(model_out_path, 'rb'))
         print("Inferring graphs")
+        
         start_time = time.monotonic()
         X_vec = model.infer(inp2_graphs)
         infer_time = timedelta(seconds=time.monotonic() - start_time)
@@ -284,9 +295,8 @@ def wlksvd_emb(cfg_path, output_path, ndims_list, n_malware_train, n_benign_trai
         
         ## Visualizing
         print('Visualizations')
-        twoD_tsne_vector, fig = TSNE_2D_plot(X_vec, inp2_labels, n_inp2, ndim, 'WLKSVD',
-                                                 return_plot=True)
-
+        twoD_tsne_vector, fig = TSNE_2D_plot(X_vec, inp2_labels, n_inp2, ndim, 'WLKSVD', return_plot=True)
+        
         fig_name = model_path + '/test/test_vector_' + str(ndim) + '-dims.png'
         fig.savefig(fig_name)
         plt.clf()

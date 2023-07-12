@@ -2,8 +2,6 @@ import time
 
 import networkx
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler as min_max_scaler
 
 from g2v_util import *
 from cluster_util import *
@@ -64,39 +62,26 @@ if __name__ == "__main__":
     print('******************* STEP: 2 *******************')
 
     # Graph2Vec dimensions
-    g2v_ndims_list = [2, 4, 8, 16, 32, 64, 128, 256]
+    g2v_ndims_list = [ 2 , 4, 8, 16, 32, 64, 128, 256]
     
-    wlksvd_ndims_list = [ 512, 1024, 2048, 4096 ]
+    wlksvd_ndims_list = [ 512 , 1024, 2048, 4096 ]
     
     # The hyper parameters for embedding is inside the function 
     
-    embed_list = [ 'wlksvd', 'd2v']
+    embed_list = [ 'wlksvd' , 'd2v']
     
-    #model_path = create_embedding(embed_list, cfg_path, output_path, ndims_list, n_malware, n_benign, n_test_malware, n_test_benign, isTrain = True)
-    
-    ####### 3. Unsupervised clustering algorithm training with hold-out validation. ##################
+    model_path = create_embedding(embed_list, cfg_path, output_path, g2v_ndims_list, wlksvd_ndims_list, n_malware, n_benign, n_test_malware, n_test_benign, isTrain = True)
+        
+    ####### 3. Supervised learning Procedures ##################
     print('******************* STEP: 3 *******************')
-    # Unsupervised clustering algorithms
-    #cluster_alg_name = ['Kmeans', 'spectral', 'Aggloromative', 'DBSCAN']
-    #cluster_alg_name = ['Kmeans', 'Aggloromative']
-    # The hyper parameters for each clustering method is inside the function
-
-    #clustering_training(output_path, embed_list, cluster_alg_name, g2v_ndims_list, wlksvd_ndims_list)
-
-    ####### 4. Cluster prediction for Test dataset ##################
-    print('******************* STEP: 4 *******************')
-    #cluster_prediction(test_cfg_path, output_path, param, cluster_alg_name, ndims_list)
-
-    ####### 5. Supervised learning procedures for Test dataset ##################
-    print('******************* STEP: 5 *******************')
     
     #all implemented classifiers( mnb, compnb, catnb, and potentially gp are not functional if data contains negative values, mlp is also not functional)
     #superv_alg_name = [ 'knn', 'rnn', 'lsvc', 'nsvc', 'svc', 'gp', 'dt', 'rf', 'ada', 'gnb', 'mnb', 
     #                    'compnb', 'catnb' ,'qda', 'lda', 'mlp', 'ridge', 'pa', 'sgd', 'perc', 'etc', 'hgbc', 'gbc']
     
-    d2v_superv_alg_name = [ 'svc' ] # , 'rf', 'hgbc' ]
+    d2v_superv_alg_name = [ 'svc', 'rf', 'hgbc' ]
     
-    wlksvd_superv_alg_name = [ 'lsvc' ] # , 'rf', 'hgbc' ]
+    wlksvd_superv_alg_name = [ 'lsvc', 'rf', 'hgbc' ]
     
     clf_type1 = 'plain'
     clf_type2 = 'optimized'
@@ -131,5 +116,26 @@ if __name__ == "__main__":
         
         group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, 'optimized')
         group_plotter_by_alg(superv_alg_name, emb, ndims_list, output_path, 'plain')
+    
+    ####### 4. Unsupervised clustering algorithm training with hold-out validation. ##################
+    print('******************* STEP: 4 *******************')
+    # Unsupervised clustering algorithms
+    #cluster_alg_name = ['Kmeans', 'spectral', 'Aggloromative', 'DBSCAN']
+    cluster_alg_name = ['Kmeans', 'Aggloromative']
+    # The hyper parameters for each clustering method is inside the function
+    
+    for emb in embed_list:
+        if emb == 'wlksvd':
+            clustering_training(output_path, emb, cluster_alg_name, wlksvd_ndims_list)
+        elif emb == 'd2v':
+            clustering_training(output_path, emb, cluster_alg_name, g2v_ndims_list)
+
+    ####### 5. Cluster prediction for Test dataset ##################
+    print('******************* STEP: 5 *******************')
+    for emb in embed_list:
+        if emb == 'wlksvd':
+            cluster_prediction(test_cfg_path, output_path, cluster_alg_name, emb, wlksvd_ndims_list, n_test_malware, n_test_benign)
+        elif emb == 'd2v':
+            cluster_prediction(test_cfg_path, output_path, cluster_alg_name, emb, g2v_ndims_list, n_test_malware, n_test_benign)
     
     print('******************* Process Finished *******************')

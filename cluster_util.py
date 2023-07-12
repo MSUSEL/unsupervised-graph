@@ -11,20 +11,28 @@ from sklearn.cluster import *
 from sklearn import metrics
 from sklearn.metrics.cluster import contingency_matrix
 
+from sklearn.model_selection import train_test_split
+
+from g2v_util import *
+
 import pickle
 
-'''
-def clustering_training(output_path, embed_list, cluster_alg_name =['Kmeans'], g2v_ndims, wlksvd_ndims):
+
+def clustering_training(output_path, emb, cluster_alg_name, ndims_list):
     save_model = True
+    
+    if emb == 'wlksvd':
+        model_path = output_path + 'wlksvd_models/'
+    elif emb == 'd2v':
+        model_path = output_path + 'd2v_models/'
     
     for ndim in ndims_list:
         print('Dimensions = ', ndim)
 
         # load data
-        model_path = output_path +  'd2v_models/'
         
-        vector_path = model_path + '/' + 'train_file_vectors_' + str(ndim) + '.csv'
-        label_path = model_path + '/' + 'train_file_labels_' + str(ndim) + '.csv'
+        vector_path = model_path + '/train/' + 'train_file_vectors_' + str(ndim) + '.csv'
+        label_path = model_path + '/train/' + 'train_file_labels_' + str(ndim) + '.csv'
 
         train_vector = pd.read_csv(vector_path, header=None).values
 
@@ -122,54 +130,35 @@ def clustering_training(output_path, embed_list, cluster_alg_name =['Kmeans'], g
             cluster_valuation.to_csv(valuation_name)
     return 0
 
-def cluster_prediction(cfg_path, output_path, param, cluster_alg_name =['Kmeans'], ndims_list = [8]):
-    ##### Testing ######################
+def cluster_prediction(cfg_path, output_path, cluster_alg_name , emb, ndims_list, n_test_malware, n_test_benign):
+    for ndim in ndims_list:
+        if emb == 'wlksvd':
+            model_path = output_path +'wlksvd_models'
+            model_name = (model_path + '/' + 'wlksvd_model_' + str(ndim) + '.model')
+            
+        elif emb == 'd2v':
+            model_path = output_path +'d2v_models'
+            model_name = (model_path + '/' + 'd2v_model_' + str(ndim) + '.model')
+        
+        vector_path = model_path + '/test/' + 'test_file_vectors_' + str(ndim) + '.csv'
+        label_path = model_path + '/test/' + 'test_file_labels_' + str(ndim) + '.csv'
 
-    # load testing data
-    print('Load test CFG data')
-    test_graphs, test_file_names, test_Labels, n_test = loadTestCFG(cfg_path, n_test_malware, n_test_benign)
+        test_vector = pd.read_csv(vector_path, header=None).values
 
-    ## Create WL hash word documents for testing set
-    print('Creating WL hash words for testing set')
-    test_documents = createWLhash(test_graphs, param)
+        X_test = StandardScaler().fit_transform(test_vector)
 
-    for ndims in ndims_list:
-        print('Dimensions = ', ndims)
+        test_df = pd.read_csv(label_path)
+        y_test = test_df['Label'].tolist()
+            
+                ## Visualizing
+        print('generating clustering and visualizations...')
+        twoD_tsne_vector, fig = TSNE_2D_plot(X_test, y_test, len(y_test), ndim,
+                                             return_plot=True)
 
-        ## Parameters
-        param = WL_parameters(dimensions=ndims)
-        param._set_seed()
-
-        # model path
-        model_path = output_path +'d2v_models'
-        model_name = (model_path + '/' + 'd2v_model_' + str(param.dimensions) + '.model')
-
-        try:
-            d2v_model = Doc2Vec.load(model_name)
-        except Exception as e:
-            print("ERROR - d2v model not found!!!!!!! : %s" % e)
-
-        # Doc2Vec inference
-        print('Doc2Vec inference')
-        test_vector = np.array([d2v_model.infer_vector(d.words) for d in test_documents])
-
-        vector_out_path = Path(model_path + '/Test/' + 'test_file_vectors_' +str(param.dimensions) + '.csv')
-        vector_out_path.parent.mkdir(parents=True, exist_ok=True)
-        pd.DataFrame(test_vector).to_csv(vector_out_path, header=None, index= None)
-
-        label_out_path = Path(model_path+'/Test/'+'file_labels_'+str(param.dimensions)+'.csv')
-        label_out_path.parent.mkdir(parents=True, exist_ok=True)
-        test_df = pd.DataFrame({'name': test_file_names, 'Label': test_Labels})
-        test_df.to_csv(label_out_path)
-
-        # Visualizing
-        print('Visualizations')
-        twoD_tsne_vector, fig =TSNE_2D_plot(test_vector, test_Labels, n_test, param.dimensions, return_plot=True)
-
-        fig_name = model_path + '/Test/' + 'test_vector_' + str(param.dimensions)  + '-dims.png'
+        fig_name = model_path + '/test/' + 'test_vector_' + str(ndim) + '-dims.png'
         fig.savefig(fig_name)
-        plt.clf()
-
+        plt.clf()    
+            
         for cluster_alg in cluster_alg_name:
             print(cluster_alg)
             cluster_valuation = pd.DataFrame()
@@ -201,41 +190,41 @@ def cluster_prediction(cfg_path, output_path, param, cluster_alg_name =['Kmeans'
 
                     os.makedirs(cluster_model_path, exist_ok=True)
 
-                    cluster_model_name = (cluster_model_path + '/' + 'clustering_model_' + str(
-                        ndims) + '-dims_' + str(hyper_para) + '-clusters.sav')
+                    cluster_model_name = (cluster_model_path + '/' + 'clustering_model_' + str(ndim) + '-dims_' + str(hyper_para) + '-clusters.sav')
 
                     # load the model from disk
                     try:
                         clustering_model = pickle.load(open(cluster_model_name, 'rb'))
                     except Exception as e:
                         print("ERROR - clustering model not found!!!!!!! : %s" % e)
-
+                print(X_test.shape)
                 if cluster_alg == 'Kmeans':
-                    array_float = np.array(test_vector, dtype=np.float64)
+                    array_float = np.array(X_test, dtype=np.float64)
+                    print(array_float.shape)
                     y_pred = clustering_model.predict(array_float)
                 elif cluster_alg == 'spectral':
-                    y_pred = clustering_model.fit_predict(test_vector)
+                    y_pred = clustering_model.fit_predict(X_test)
                 elif cluster_alg == 'Aggloromative':
-                    y_pred = clustering_model.fit_predict(test_vector)
+                    y_pred = clustering_model.fit_predict(X_test)
                 elif cluster_alg == 'DBSCAN':
-                    y_pred = clustering_model.fit_predict(test_vector)
+                    y_pred = clustering_model.fit_predict(X_test)
 
-                # cluster_valuation.loc[0,len(cluster_valuation.index)] = cluster_evaluation(y_val, y_pred)
+                #cluster_valuation.loc[0,len(cluster_valuation.index)] = cluster_evaluation(y_val, y_pred)
 
-                eval, cntg = cluster_evaluation(test_Labels, y_pred)
+                eval, cntg = cluster_evaluation(y_test, y_pred)
                 print(cntg)
                 print(eval)
-                cluster_valuation = cluster_valuation.append( eval, ignore_index= True)
+                cluster_valuation = cluster_valuation.append(eval, ignore_index= True)
                 cluster_valuation.reset_index()
 
-                predict_out_path = Path(model_path + '/' + cluster_alg + '/Test/' + 'file_predictions_' + str(ndims) + '-dims_'+ str(hyper_para) + '-clusters.csv')
+                predict_out_path = Path(model_path + '/' + cluster_alg + '/test/' + 'file_predictions_' + str(ndim) + '-dims_'+ str(hyper_para) + '-clusters.csv')
                 predict_out_path.parent.mkdir(parents=True, exist_ok=True)
-                test_df = pd.DataFrame({'name': test_df['name'].tolist(), 'Label': test_Labels, 'Predict': y_pred})
+                test_df = pd.DataFrame({'name': test_df['name'].tolist(), 'Label': y_test, 'Predict': y_pred})
                 test_df.to_csv(predict_out_path)
 
-                fig = plot_clusters(twoD_tsne_vector, y_pred, alg_name= cluster_alg, hyper_para_name=hyper_para_name,hyp_para=hyper_para, ndims=ndims)
+                fig = plot_clusters(twoD_tsne_vector, y_pred, alg_name= cluster_alg, hyper_para_name=hyper_para_name,hyp_para=hyper_para, ndims=ndim)
 
-                fig_name = Path(model_path + '/' + cluster_alg+'/Test/' + 'test_clustering_' + str(ndims) + '-dims_'+
+                fig_name = Path(model_path + '/' + cluster_alg + '/test/' + 'test_clustering_' + str(ndim) + '-dims_'+
                                 str(hyper_para)+'-clusters.png')
                 fig_name.parent.mkdir(parents=True, exist_ok=True)
                 fig.savefig(fig_name)
@@ -243,11 +232,11 @@ def cluster_prediction(cfg_path, output_path, param, cluster_alg_name =['Kmeans'
 
             cluster_valuation.insert(0, hyper_para_name, hyper_para_list)
 
-            valuation_name = Path(model_path + '/' + cluster_alg+'/Test/' + 'test_clustering_evaluation_' + str(ndims) +'-dims.csv')
+            valuation_name = Path(model_path + '/' + cluster_alg + '/test/' + 'test_clustering_evaluation_' + str(ndim) +'-dims.csv')
             valuation_name.parent.mkdir(parents=True, exist_ok=True)
             cluster_valuation.to_csv(valuation_name)
 
-'''
+
 def get_clf_hyper_para(cluster_alg):
 
     if cluster_alg == 'Kmeans':

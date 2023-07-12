@@ -326,7 +326,7 @@ def TSNE_2D_plot(vector, labels, n_vec, dimensions, emb,  return_plot = False):
     # plt.subplot(1,2,2)
     plt.plot(twoD_embedded_graphs[idx_benign, 0], twoD_embedded_graphs[idx_benign, 1], 'b*', label='benign')
     plt.legend(loc='upper left')
-    plt.suptitle('Graph2Vec (' + str(dimensions) + ' dims) \n TSNE visualization of input graphs')
+    plt.suptitle(emb + ' (' + str(dimensions) + ' dims) \n TSNE visualization of input graphs')
     # plt.legend(bbox_to_anchor=(1.05, 1))
 
     fig1 = plt.gcf()

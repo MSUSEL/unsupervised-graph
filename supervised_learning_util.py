@@ -63,7 +63,7 @@ def supervised_learning_par_caller(ndim, output_path, superv_alg_name, emb, clf_
     y_train_bin = [1 if idx == 'Malware' else 0 for idx in y_train]
     y_test_bin = [1 if idx == 'Malware' else 0 for idx in y_test]
     
-    min_max_scaler = sk.preprocessing.MinMaxScaler()
+    #min_max_scaler = sk.preprocessing.MinMaxScaler()
     #test_scaled = min_max_scaler.fit_transform(ext)
     
     train_vector = pd.read_csv(train_vector_path, header=None).values
@@ -100,7 +100,7 @@ def supervised_learning_par_caller(ndim, output_path, superv_alg_name, emb, clf_
             output_path1, model = supervised_methods_evaluation(alg, model, X_train, y_train_bin, X_test, y_test_bin,
                                                                     ndim, X_train_size, y_train_size,
                                                                     output_path, emb, training_time)
-    return 0
+    return model, X_train, y_train_bin, X_test, y_test_bin
 
 
 def generate_k_nearest_neighbours(X, y, X_train, y_train, emb, pre_optimized = False):
