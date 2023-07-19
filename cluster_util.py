@@ -1,5 +1,5 @@
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.preprocessing import MaxAbsScaler
 import os
 import numpy as np
 import pandas as pd
@@ -36,7 +36,10 @@ def clustering_training(output_path, emb, cluster_alg_name, ndims_list):
 
         train_vector = pd.read_csv(vector_path, header=None).values
 
-        vector = StandardScaler().fit_transform(train_vector)
+        # vector = StandardScaler().fit_transform(train_vector)
+        scaler = MaxAbsScaler()
+        scaler.fit(train_vector)
+        vector = scaler.transform(train_vector)
 
         train_df = pd.read_csv(label_path)
         train_vector_labels = train_df['Label'].tolist()
@@ -102,6 +105,8 @@ def clustering_training(output_path, emb, cluster_alg_name, ndims_list):
                                                             twoD_tsne_vector)
                     y_pred = clustering_model.fit_predict(X_val)
 
+                clustering_model.scaler = scaler
+
                 # cluster_valuation.loc[0,len(cluster_valuation.index)] = cluster_evaluation(y_val, y_pred)
                 eval, cntg = cluster_evaluation(y_val, y_pred)
                 print(cntg)
@@ -145,14 +150,12 @@ def cluster_prediction(cfg_path, output_path, cluster_alg_name , emb, ndims_list
 
         test_vector = pd.read_csv(vector_path, header=None).values
 
-        X_test = StandardScaler().fit_transform(test_vector)
-
         test_df = pd.read_csv(label_path)
         y_test = test_df['Label'].tolist()
             
                 ## Visualizing
         print('generating clustering and visualizations...')
-        twoD_tsne_vector, fig = TSNE_2D_plot(X_test, y_test, len(y_test), ndim,
+        twoD_tsne_vector, fig = TSNE_2D_plot(test_vector, y_test, len(y_test), ndim,
                                              return_plot=True)
 
         fig_name = model_path + '/test/' + 'test_vector_' + str(ndim) + '-dims.png'
@@ -163,22 +166,22 @@ def cluster_prediction(cfg_path, output_path, cluster_alg_name , emb, ndims_list
             print(cluster_alg)
             cluster_valuation = pd.DataFrame()
 
-            if cluster_alg == 'Kmeans':
-                hyper_para_name = 'n_clusters'
-                random_state = 0
-                hyper_para_list = [ 2, 3, 4, 5, 6, 7, 8, 9, 10, 15,  20]
-            elif cluster_alg == 'spectral':
-                hyper_para_name = 'n_clusters'
-                assign_labels = 'discretize'
-                hyper_para_list = np.arange(2, 31, step = 1)
-            elif cluster_alg == 'Aggloromative':
-                hyper_para_name = 'n_clusters'
-                linkage = 'ward'
-                hyper_para_list = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-            elif cluster_alg == 'DBSCAN':
-                hyper_para_name = 'eps'
-                min_samples = 2
-                hyper_para_list = np.arange(5,150 , step = 5)
+            # if cluster_alg == 'Kmeans':
+            #     hyper_para_name = 'n_clusters'
+            #     random_state = 0
+            #     hyper_para_list = [ 2, 3, 4, 5, 6, 7, 8, 9, 10, 15,  20]
+            # elif cluster_alg == 'spectral':
+            #     hyper_para_name = 'n_clusters'
+            #     assign_labels = 'discretize'
+            #     hyper_para_list = np.arange(2, 31, step = 1)
+            # elif cluster_alg == 'Aggloromative':
+            #     hyper_para_name = 'n_clusters'
+            #     linkage = 'ward'
+            #     hyper_para_list = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
+            # elif cluster_alg == 'DBSCAN':
+            #     hyper_para_name = 'eps'
+            #     min_samples = 2
+            #     hyper_para_list = np.arange(5,150 , step = 5)
 
             hyper_para_name, hyper_para_list = get_clf_hyper_para(cluster_alg)
 
@@ -197,6 +200,11 @@ def cluster_prediction(cfg_path, output_path, cluster_alg_name , emb, ndims_list
                         clustering_model = pickle.load(open(cluster_model_name, 'rb'))
                     except Exception as e:
                         print("ERROR - clustering model not found!!!!!!! : %s" % e)
+
+                scaler = clustering_model.scaler
+
+                X_test = scaler.transform(test_vector)
+
                 print(X_test.shape)
                 if cluster_alg == 'Kmeans':
                     array_float = np.array(X_test, dtype=np.float64)
@@ -260,8 +268,6 @@ def get_clf_hyper_para(cluster_alg):
 
 def TSNE_2D_plot(vector, labels, n_vec, dimensions, return_plot = False):
     twoD_embedded_graphs = TSNE(n_components=2).fit_transform(vector)
-
-
 
     idx_malware = [i for i in range(n_vec) if labels[i] == 'Malware']
     idx_benign = [i for i in range(n_vec) if labels[i] == 'Benign']
